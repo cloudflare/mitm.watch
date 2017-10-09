@@ -28,6 +28,15 @@ Assuming tls-tris to be checked out in `~/repos/tls-tris`:
     ln -s ../.. "$GOPATH/src/jssock"
     go/bin/gopherjs serve --http localhost:8080 -v
 
+Allow socket connections to the target host (currently localhost) using
+[policyserver.py](http://github.com/digitalbazaar/forge/tree/master/flash/policyserver.py):
+
+    python policyserver.py -d -v -p 8001 &
+
+To test, visit http://localhost:8080/jssock/ and open the Console tab in the
+Developer Tools (tested with Chrome). Grant permission to use Flash and watch
+the logs.
+
 ## Bugs
 Known limitations and issues:
 - Requires click-to-play (user interaction).
@@ -38,3 +47,4 @@ Known limitations and issues:
 - Certificate validation is missing.
 - Remove/avoid the need for polling the SWF.
 - There are a lot of TODOs.
+- Configure a more restricted socket policy file.
