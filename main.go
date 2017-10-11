@@ -14,8 +14,10 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
-var initLock sync.Mutex
-var inited bool
+var (
+	once      sync.Once
+	socketApi *js.Object // the flash object reference
+)
 
 type keyLogPrinter struct{}
 
@@ -25,7 +27,7 @@ func (*keyLogPrinter) Write(line []byte) (int, error) {
 }
 
 func main() {
-	initOnce()
+	once.Do(initSocketApi)
 	conn, err := DialTCP("tcp", "localhost:4433")
 	if err != nil {
 		panic(err)
@@ -54,56 +56,74 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("Response:")
-	fmt.Println(response[:n])
+	fmt.Printf("%s", response[:n])
 }
 
-func initOnce() {
-	initLock.Lock()
-	defer initLock.Unlock()
-	if inited {
-		return
+func socketCall(name string, args ...interface{}) (interface{}, error) {
+	res := socketApi.Call(name, args...)
+	if socketApi == nil {
+		return nil, errors.New("Flash is not ready")
 	}
+	var value interface{}
+	if valueObj := res.Get("value"); valueObj != js.Undefined {
+		value = valueObj.Interface()
+	}
+	var err error
+	if errObj := res.Get("error"); errObj != js.Undefined {
+		err = errors.New(errObj.String())
+	}
+	return value, err
+}
 
-	var socketPool *js.Object
+func socketCallInt(name string, args ...interface{}) (int, error) {
+	value, err := socketCall(name, args...)
+	v, ok := value.(float64)
+	if err == nil && !ok {
+		err = errors.New("wanted int as remote type")
+	}
+	return int(v), err
+}
+
+func socketCallString(name string, args ...interface{}) (string, error) {
+	value, err := socketCall(name, args...)
+	v, ok := value.(string)
+	if err == nil && !ok {
+		err = errors.New("wanted string as remote type")
+	}
+	return v, err
+}
+
+func initSocketApi() {
 	// wait for the SWF to become ready
 	for i := 0; i < 100; i++ {
-		socketPool = getSocketPool()
-		if socketPool == nil {
+		socketApi = getSocketApi()
+		if socketApi == nil {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			break
 		}
 	}
 
-	if socketPool == nil {
+	if socketApi == nil {
 		panic("Failed to load Flash plugin")
 	}
 
-	socketPool.Call("init")
-	registerListeners(socketPool)
+	// TODO change this debug into actual channel updates
+	socketApi.Call("subscribe", "console.log")
 }
 
-func getSocketPool() *js.Object {
-	sp := js.Global.Get("document").Call("getElementById", "socketPool")
-	initFunc := sp.Get("init")
+func getSocketApi() *js.Object {
+	sp := js.Global.Get("document").Call("getElementById", "socketApi")
+	initFunc := sp.Get("loadPolicyFile")
 	if initFunc == js.Undefined {
 		return nil
 	}
 	return sp
 }
 
-// registerListeners adds some debug logging for the Flash binary.
-func registerListeners(socketPool *js.Object) {
-	events := [...]string{"connect", "close", "ioError", "securityError", "socketData"}
-	for _, event := range events {
-		socketPool.Call("subscribe", event, "console.log")
-	}
-}
-
 // An open socket
 type Conn struct {
-	socketPool *js.Object // the flash object reference
-	socketId   string     // the socket ID
+	socketId int // the socket ID
 }
 
 func DialTCP(network, address string) (*Conn, error) {
@@ -116,12 +136,14 @@ func DialTCP(network, address string) (*Conn, error) {
 		return nil, err
 	}
 
-	socketPool := getSocketPool()
-	if socketPool == nil {
+	if socketApi == nil {
 		return nil, errors.New("Flash is not ready")
 	}
-	socketId := socketPool.Call("create").String()
-	conn := &Conn{socketPool: socketPool, socketId: socketId}
+	socketId, err := socketCallInt("create")
+	if err != nil {
+		return nil, err
+	}
+	conn := &Conn{socketId: socketId}
 	// TODO call destroy when the socket ID is no longer needed?
 	if err = conn.connect(host, port); err != nil {
 		return nil, err
@@ -130,22 +152,38 @@ func DialTCP(network, address string) (*Conn, error) {
 	return conn, nil
 }
 
-func (s *Conn) connect(host, port string) error {
-	// TODO make this configurable.
-	// Service that responds with Flash socket policy file (CANNOT BE HTTP(S)!)
-	policyPort := 8001
+// loadPolicy tries to authorize socket connections to the given host. The given
+// port must respond with a Flash socket policy file. If not called, Flash will
+// only try to poke the master policy server at port 843.
+func loadPolicy(host, port string) error {
+	_, err := socketCall("loadPolicyFile", "xmlsocket://"+host+":"+port)
+	return err
+}
 
-	fmt.Println("connect", s.socketId, host, port, policyPort)
-	s.socketPool.Call("connect", s.socketId, host, port, policyPort)
+func (s *Conn) connect(host, port string) error {
+	// TODO make this configurable
+	if err := loadPolicy(host, "8001"); err != nil {
+		return err
+	}
+
+	fmt.Println("connect", s.socketId, host, port)
+	_, err := socketCall("connect", s.socketId, host, port)
+	if err != nil {
+		return err
+	}
 
 	// TODO connect can fail with ioError 2031 when nothing is listening on
 	// the port. Catch this to avoid a securityError 2048 later.
 	// TODO goroutine that checks event listener?
 	// TODO error out when error event was emitted before
 	for i := 0; i < 20; i++ {
-		ok := s.socketPool.Call("isConnected", s.socketId).Bool()
-		if ok {
-			return nil
+		value, err := socketCall("isConnected", s.socketId)
+		if connected, ok := value.(bool); ok {
+			if connected {
+				return nil
+			} else {
+				return err
+			}
 		} else {
 			time.Sleep(100 * time.Millisecond)
 		}
@@ -156,13 +194,15 @@ func (s *Conn) connect(host, port string) error {
 
 func (s *Conn) Read(b []byte) (n int, err error) {
 	// TODO Read is non-blocking, maybe register event listener?
-	result := s.socketPool.Call("receive", s.socketId, len(b))
-	b64DataWrapped := result.Get("rval")
-	if b64DataWrapped == js.Undefined {
-		return 0, errors.New("recv failed")
+	b64Data, err := socketCallString("receive", s.socketId, len(b))
+	if err != nil {
+		// TODO detect EOF
+		return 0, err
 	}
-	// Socket might not be ready, so read it ASAP
-	data, err := base64.StdEncoding.DecodeString(b64DataWrapped.String())
+	if b64Data == "" {
+		// TODO wait for data to become available
+	}
+	data, err := base64.StdEncoding.DecodeString(b64Data)
 	if err != nil {
 		return 0, err
 	}
@@ -170,19 +210,19 @@ func (s *Conn) Read(b []byte) (n int, err error) {
 	return len(data), nil
 }
 
-func (s *Conn) Write(b []byte) (n int, err error) {
+func (s *Conn) Write(b []byte) (int, error) {
 	b64Data := base64.StdEncoding.EncodeToString(b)
-	result := s.socketPool.Call("send", s.socketId, b64Data).Bool()
-	if result {
-		return n, nil
+	_, err := socketCall("send", s.socketId, b64Data)
+	if err != nil {
+		return 0, err
 	} else {
-		return 0, errors.New("Write error")
+		return len(b), nil
 	}
 }
 
 func (s *Conn) Close() error {
-	s.socketPool.Call("close", s.socketId)
-	return nil
+	_, err := socketCall("close", s.socketId)
+	return err
 }
 
 func (s *Conn) LocalAddr() net.Addr {

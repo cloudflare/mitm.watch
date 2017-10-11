@@ -16,8 +16,6 @@ of a webpage. Websockets cannot be used either since it starts with a HTTP
 conversation and then follows with a custom framing. Therefore the first
 prototype uses Adobe Flash to enable use of raw TCP sockets via its [Socket
 API](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html).
-The prototype currently uses [SocketPool from the
-Forge](https://github.com/digitalbazaar/forge/tree/master/flash) project.
 
 ## Building
 Assuming tls-tris to be checked out in `~/repos/tls-tris`:
@@ -27,6 +25,10 @@ Assuming tls-tris to be checked out in `~/repos/tls-tris`:
     ~/repos/tls-tris/_dev/go.sh get github.com/gopherjs/gopherjs
     ln -s ../.. "$GOPATH/src/jssock"
     go/bin/gopherjs serve --http localhost:8080 -v
+
+To build the Flash socket API file, [Haxe](https://haxe.org/) is required:
+
+    haxe compile.hxml
 
 Allow socket connections to the target host (currently localhost) using
 [policyserver.py](http://github.com/digitalbazaar/forge/tree/master/flash/policyserver.py):
@@ -43,7 +45,6 @@ Known limitations and issues:
 - Flash is being killed, consider alternative methods. Possible options include
   [chrome.socket.tcp](https://developer.chrome.com/apps/sockets_tcp), provided
   via a browser extension.
-- Currently EOF immediately clears the state, preventing reading the response.
 - Certificate validation is missing.
 - Remove/avoid the need for polling the SWF.
 - There are a lot of TODOs.

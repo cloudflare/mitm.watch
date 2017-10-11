@@ -1,6 +1,6 @@
 <!doctype html>
 <script src="//cdnjs.cloudflare.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
-<div id="socketPool"></div>
+<div id="socketApi"></div>
 <script>
 // HACK: pretend to have a supported flash version
 if (window.chrome) {
@@ -9,7 +9,7 @@ if (window.chrome) {
 // https://github.com/swfobject/swfobject/wiki/SWFObject-API
 // Use dimensions 100x100 instead of 0x0 or else Chrome won't prompt for
 // permission to use Flash
-swfobject.embedSWF("SocketPool.swf", "socketPool", "100", "100", "9", false, {},
+swfobject.embedSWF("socketapi.swf", "socketApi", "100", "100", "13", false, {},
                    {allowscriptaccess: "always"}, {}, null);
 </script>
 <script src="jssock.js"></script>
