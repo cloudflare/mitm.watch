@@ -87,6 +87,7 @@ class SocketAPI {
 		ExternalInterface.addCallback("loadPolicyFile", loadPolicyFile);
 
 		// Socket API
+		ExternalInterface.addCallback("create", create);
 		ExternalInterface.addCallback("connect", connect);
 		ExternalInterface.addCallback("isConnected", isConnected);
 		ExternalInterface.addCallback("send", send);
@@ -224,24 +225,34 @@ class SocketAPI {
 	}
 
 	/**
-	  Open a socket connection to the given host and port.
+	  Creates a new socket.
 
-	  Returns a socket identifier (Int). To learn about the success outcome,
-	  register an event listener using the subscribe method first.
+	  Returns the socket identifier (Int).
 	 **/
-	public function connect(host:String, port:Int):Result<Int> {
-		var sock:TaggedSocket = null;
+	public function create():Result<Int> {
 		try {
-			sock = new TaggedSocket();
+			var sock = new TaggedSocket();
 			sock.id = nextSocketId++;
 			addListeners(sock);
-			sock.connect(host, port);
 			sockets[sock.id] = sock;
 			return {value: sock.id};
 		} catch (err:Dynamic) {
-			if (sock != null) {
-				removeListeners(sock);
-			}
+			return {error: err};
+		}
+	}
+
+	/**
+	  Open a socket connection to the given host and port.
+
+	  To learn about the success outcome, register an event listener using
+	  the subscribe method first.
+	 **/
+	public function connect(socket:Int, host:String, port:Int):Result<Void> {
+		try {
+			var sock = getSocket(socket);
+			sock.connect(host, port);
+			return {};
+		} catch (err:Dynamic) {
 			return {error: err};
 		}
 	}
