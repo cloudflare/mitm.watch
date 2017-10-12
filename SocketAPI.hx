@@ -96,7 +96,6 @@ class SocketAPI {
 	}
 
 	static function main() {
-		ExternalInterface.marshallExceptions = true; // TODO remove debug
 		new SocketAPI();
 	}
 
@@ -138,7 +137,6 @@ class SocketAPI {
 	}
 
 	function handleEvent(evt:Event):Void {
-		log("handleEvent", evt); // TODO remove debug
 		var sock:TaggedSocket = evt.target;
 		var socketEvent:SocketEvent = {
 			type: evt.type,
@@ -198,7 +196,7 @@ class SocketAPI {
 	  Registers a callback that will be invoked for socket events.
 	 **/
 	public function subscribe(callback:String):Void {
-		if (listeners.indexOf(callback) != -1) {
+		if (listeners.indexOf(callback) == -1) {
 			listeners.push(callback);
 		}
 	}
