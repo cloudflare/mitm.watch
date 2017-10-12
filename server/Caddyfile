@@ -1,0 +1,19 @@
+# NOTE uses localhost domains for testing
+https://l.ls-l.info {
+	root public/
+	tls self_signed
+	log /dev/stdout
+}
+
+https://*.l4.ls-l.info,
+https://*.l6.ls-l.info {
+	root public/
+	tls self_signed {
+		#protocols tls1.3
+	}
+}
+
+# TODO create plugin
+#flashpolicy *.l4.ls-l.info,
+#flashpolicy *.l6.ls-l.info {
+#}
