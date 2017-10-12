@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"sync"
@@ -17,6 +18,10 @@ import (
 var (
 	once      sync.Once
 	socketApi *js.Object // the flash object reference
+
+	// List of connections (for dispatching events)
+	connections       map[int]*Conn
+	connectionsRWLock sync.RWMutex
 )
 
 type keyLogPrinter struct{}
@@ -60,10 +65,10 @@ func main() {
 }
 
 func socketCall(name string, args ...interface{}) (interface{}, error) {
-	res := socketApi.Call(name, args...)
 	if socketApi == nil {
 		return nil, errors.New("Flash is not ready")
 	}
+	res := socketApi.Call(name, args...)
 	var value interface{}
 	if valueObj := res.Get("value"); valueObj != js.Undefined {
 		value = valueObj.Interface()
@@ -108,8 +113,11 @@ func initSocketApi() {
 		panic("Failed to load Flash plugin")
 	}
 
-	// TODO change this debug into actual channel updates
-	socketApi.Call("subscribe", "console.log")
+	socketApi.Call("subscribe", "console.log") // TODO remove debug
+
+	connections = make(map[int]*Conn)
+	js.Global.Set("socketApiListener", js.MakeFunc(handleEvent))
+	socketApi.Call("subscribe", "socketApiListener")
 }
 
 func getSocketApi() *js.Object {
@@ -123,7 +131,46 @@ func getSocketApi() *js.Object {
 
 // An open socket
 type Conn struct {
-	socketId int // the socket ID
+	socketId int        // the socket ID
+	ioResult chan error // result of connect/read attempt
+}
+
+type socketEvent struct {
+	socketId       int
+	eventType      string
+	errorMessage   string
+	bytesAvailable uint
+}
+
+// handleEvent processes events from the Flash socket API.
+func handleEvent(this *js.Object, arguments []*js.Object) interface{} {
+	o := arguments[0]
+	socketEvent := socketEvent{
+		socketId:  o.Get("socket").Int(),
+		eventType: o.Get("type").String(),
+	}
+	if v, ok := o.Get("error").Interface().(string); ok {
+		socketEvent.errorMessage = v
+	}
+	if v, ok := o.Get("bytesAvailable").Interface().(float64); ok {
+		socketEvent.bytesAvailable = uint(v)
+	}
+	if conn := getSocket(socketEvent.socketId); conn != nil {
+		go conn.handleSocketEvent(socketEvent)
+	}
+	return nil
+}
+
+func registerSocket(conn *Conn) {
+	connectionsRWLock.Lock()
+	defer connectionsRWLock.Unlock()
+	connections[conn.socketId] = conn
+}
+
+func getSocket(socketId int) *Conn {
+	connectionsRWLock.RLock()
+	defer connectionsRWLock.RUnlock()
+	return connections[socketId]
 }
 
 func DialTCP(network, address string) (*Conn, error) {
@@ -143,13 +190,48 @@ func DialTCP(network, address string) (*Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn := &Conn{socketId: socketId}
+	conn := &Conn{
+		socketId: socketId,
+		ioResult: make(chan error, 1),
+	}
+	registerSocket(conn)
 	// TODO call destroy when the socket ID is no longer needed?
 	if err = conn.connect(host, port); err != nil {
 		return nil, err
 	}
 	log.Println("connected!")
 	return conn, nil
+}
+
+func (conn *Conn) handleSocketEvent(socketEvent socketEvent) {
+	switch socketEvent.eventType {
+	case "connect":
+		select {
+		case conn.ioResult <- nil:
+		default:
+		}
+
+	case "ioError", "securityError":
+		err := errors.New(socketEvent.errorMessage)
+		// do not block in case of multiple errors.
+		select {
+		case conn.ioResult <- err:
+		default:
+		}
+
+	case "socketData":
+		// inform of available data, non-blocking
+		select {
+		case conn.ioResult <- nil:
+		default:
+		}
+
+	case "close":
+		select {
+		case conn.ioResult <- io.EOF:
+		default:
+		}
+	}
 }
 
 // loadPolicy tries to authorize socket connections to the given host. The given
@@ -172,35 +254,50 @@ func (s *Conn) connect(host, port string) error {
 		return err
 	}
 
-	// TODO connect can fail with ioError 2031 when nothing is listening on
-	// the port. Catch this to avoid a securityError 2048 later.
-	// TODO goroutine that checks event listener?
-	// TODO error out when error event was emitted before
-	for i := 0; i < 20; i++ {
-		value, err := socketCall("isConnected", s.socketId)
-		if connected, ok := value.(bool); ok {
-			if connected {
-				return nil
-			} else {
-				return err
+	select {
+	case err = <-s.ioResult:
+		return err
+	case <-time.After(2000 * time.Millisecond):
+		// TODO make timeout configurable (SetDeadline?)
+		return errors.New("connection timed out")
+	}
+}
+
+// readData tries to read at most n bytes from the socket, blocking until bytes
+// become available.
+func (s *Conn) readData(n int) (string, error) {
+	var err error
+
+	// clear past data results, then try to read data and otherwise wait.
+	select {
+	case err = <-s.ioResult:
+	default:
+	}
+	b64Data, err := socketCallString("receive", s.socketId, n)
+	if err == nil && b64Data == "" {
+		// no data available, block until there is data
+		select {
+		case err = <-s.ioResult:
+			if err != io.EOF {
+				b64Data, err = socketCallString("receive", s.socketId, n)
 			}
-		} else {
-			time.Sleep(100 * time.Millisecond)
+
+		case <-time.After(1000 * time.Millisecond):
+			// TODO configurable timeout
+			err = errors.New("read timed out")
 		}
 	}
-
-	return errors.New("Not connected")
+	// could happen if read was attempted after EOF
+	if err != nil && err.Error() == "Error: socket is closed" {
+		err = io.EOF
+	}
+	return b64Data, err
 }
 
 func (s *Conn) Read(b []byte) (n int, err error) {
-	// TODO Read is non-blocking, maybe register event listener?
-	b64Data, err := socketCallString("receive", s.socketId, len(b))
+	b64Data, err := s.readData(len(b))
 	if err != nil {
-		// TODO detect EOF
 		return 0, err
-	}
-	if b64Data == "" {
-		// TODO wait for data to become available
 	}
 	data, err := base64.StdEncoding.DecodeString(b64Data)
 	if err != nil {

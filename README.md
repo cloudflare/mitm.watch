@@ -46,6 +46,5 @@ Known limitations and issues:
   [chrome.socket.tcp](https://developer.chrome.com/apps/sockets_tcp), provided
   via a browser extension.
 - Certificate validation is missing.
-- Remove/avoid the need for polling the SWF.
 - There are a lot of TODOs.
 - Configure a more restricted socket policy file.
