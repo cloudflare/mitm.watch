@@ -82,7 +82,12 @@ func (p *policyContext) InspectServerBlocks(_ string, serverBlocks []caddyfile.S
 	addressToKey := make(map[string]string)
 	for _, sb := range serverBlocks {
 		for _, key := range sb.Keys {
-			addr, err := net.ResolveTCPAddr("tcp", key)
+			host, port, err := net.SplitHostPort(key)
+			if err != nil {
+				host = key
+				port = "843"
+			}
+			addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(host, port))
 			if err != nil {
 				return nil, err
 			}

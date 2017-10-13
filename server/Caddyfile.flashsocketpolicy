@@ -1,0 +1,4 @@
+l.ls-l.info:8001 {
+	ports 4433 *.l4.ls-l.info
+	ports 4433 *.l6.ls-l.info
+}

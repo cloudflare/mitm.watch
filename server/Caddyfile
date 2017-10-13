@@ -1,4 +1,5 @@
 # NOTE uses localhost domains for testing
+http://l.ls-l.info,
 https://l.ls-l.info {
 	root public/
 	tls self_signed
@@ -12,8 +13,3 @@ https://*.l6.ls-l.info {
 		#protocols tls1.3
 	}
 }
-
-# TODO create plugin
-#flashpolicy *.l4.ls-l.info,
-#flashpolicy *.l6.ls-l.info {
-#}
