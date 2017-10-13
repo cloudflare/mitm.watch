@@ -1,3 +1,4 @@
 .*.sw?
 go
 server/public/
+caddy
