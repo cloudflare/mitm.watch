@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -50,7 +49,6 @@ func main() {
 	}
 
 	tls_conn := tls.Client(conn, tls_config)
-	fmt.Println(tls_conn)
 	n, err := tls_conn.Write([]byte("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"))
 	if err != nil {
 		panic(err)
@@ -202,7 +200,6 @@ func DialTCP(network, address string) (*Conn, error) {
 	if err = conn.connect(host, port); err != nil {
 		return nil, err
 	}
-	log.Println("connected!")
 	return conn, nil
 }
 
@@ -276,7 +273,6 @@ func (s *Conn) connect(host, port string) error {
 		return err
 	}
 
-	fmt.Println("connect", s.socketId, host, port)
 	_, err := socketCall("connect", s.socketId, host, port)
 	if err != nil {
 		return err
