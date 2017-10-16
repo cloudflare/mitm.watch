@@ -248,8 +248,8 @@ func DialTCP(network, address string) (*Conn, error) {
 		ioResult: make(chan error, 1),
 	}
 	registerSocket(conn)
-	// TODO call destroy when the socket ID is no longer needed?
 	if err = conn.connect(host, port); err != nil {
+		socketCall("destroy", socketId)
 		return nil, err
 	}
 	return conn, nil
@@ -395,6 +395,7 @@ func (s *Conn) Write(b []byte) (int, error) {
 
 func (s *Conn) Close() error {
 	_, err := socketCall("close", s.socketId)
+	socketCall("destroy", s.socketId)
 	return err
 }
 
