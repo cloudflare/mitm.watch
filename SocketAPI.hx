@@ -93,6 +93,7 @@ class SocketAPI {
 		ExternalInterface.addCallback("send", send);
 		ExternalInterface.addCallback("receive", receive);
 		ExternalInterface.addCallback("close", close);
+		ExternalInterface.addCallback("destroy", destroy);
 	}
 
 	static function main() {
@@ -176,6 +177,7 @@ class SocketAPI {
 		// - No policy service was running.
 		// - Policy service runs on unprivileged port (>1024) while the
 		//   destination port is a privileged port.
+		// - Hostname could not be resolved.
 		sock.addEventListener(SecurityErrorEvent.SECURITY_ERROR,
 				handleEvent);
 		sock.addEventListener(ProgressEvent.SOCKET_DATA, handleEvent);
@@ -339,6 +341,21 @@ class SocketAPI {
 		try {
 			var sock = getSocket(socket);
 			sock.close();
+			return {};
+		} catch (err:Dynamic) {
+			return {error: err};
+		}
+	}
+
+	/**
+	  Destroys a socket, prevent further events from being emitted. The
+	  caller is responsible for closing open sockets first.
+	 **/
+	public function destroy(socket:Int):Result<Void> {
+		try {
+			var sock = getSocket(socket);
+			sockets.remove(socket);
+			removeListeners(sock);
 			return {};
 		} catch (err:Dynamic) {
 			return {error: err};
