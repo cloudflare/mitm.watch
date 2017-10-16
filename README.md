@@ -41,7 +41,7 @@ To allow socket connections according to the the config file:
 
     cd server
     make caddy
-    ./caddy -type flashsocketpolicy -conf Caddyfile.flashsocketpolicy
+    sudo ./caddy -type flashsocketpolicy -conf Caddyfile.flashsocketpolicy
 
 To test, visit http://localhost:8080/jssock/ and open the Console tab in the
 Developer Tools (tested with Chrome). Grant permission to use Flash and watch
@@ -55,4 +55,4 @@ Known limitations and issues:
   via a browser extension.
 - Certificate validation is missing.
 - There are a lot of TODOs.
-- Configure a more restricted socket policy file.
+- Split socket API from main.go into a separate go file

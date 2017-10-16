@@ -326,10 +326,6 @@ func (s *Conn) readTimeout() <-chan time.Time {
 func (s *Conn) connect(host, port string) error {
 	s.readLock.Lock()
 	defer s.readLock.Unlock()
-	// TODO make this configurable
-	if err := loadPolicy(host, "8001"); err != nil {
-		return err
-	}
 
 	_, err := socketCall("connect", s.socketId, host, port)
 	if err != nil {
