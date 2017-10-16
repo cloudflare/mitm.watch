@@ -3,6 +3,7 @@ package flashsocketpolicy
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/mholt/caddy"
@@ -48,7 +49,7 @@ func setupPorts(c *caddy.Controller) error {
 		if c.NextArg() {
 			return c.ArgErr()
 		}
-		line := fmt.Sprintf(`<allow-access-from domain="%s" to-ports="%s" />\n`, domain, toPorts)
+		line := fmt.Sprintf(`<allow-access-from domain="%s" to-ports="%s" />`+"\n", domain, toPorts)
 		siteConfig.rules = append(siteConfig.rules, line)
 	}
 	return nil
@@ -126,7 +127,7 @@ func newPolicyServer(config *siteConfig) *policyServer {
 	for _, line := range config.rules {
 		buffer.WriteString(line)
 	}
-	buffer.WriteString(`</cross-domain-policy>\n`)
+	buffer.WriteString("</cross-domain-policy>\n")
 	return &policyServer{
 		address:  config.listenAddress,
 		response: buffer.Bytes(),
@@ -142,6 +143,7 @@ func (*policyServer) ServePacket(net.PacketConn) error {
 }
 
 func (s *policyServer) Listen() (net.Listener, error) {
+	log.Println("Listening on", s.address)
 	return net.Listen("tcp", s.address)
 }
 
