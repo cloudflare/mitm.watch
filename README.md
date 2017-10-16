@@ -18,22 +18,30 @@ prototype uses Adobe Flash to enable use of raw TCP sockets via its [Socket
 API](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/net/Socket.html).
 
 ## Building
-Assuming tls-tris to be checked out in `~/repos/tls-tris`:
+To build the Flash socket API file, [Haxe](https://haxe.org/) must be installed.
+To build the frontend, assuming tls-tris to be checked out in
+`~/repos/tls-tris`:
 
     export GOROOT=$(~/repos/tls-tris/_dev/go.sh env GOROOT)
     export GOPATH=$PWD/go
     ~/repos/tls-tris/_dev/go.sh get github.com/gopherjs/gopherjs
+
+During development of the frontend:
+
     ln -s ../.. "$GOPATH/src/jssock"
     go/bin/gopherjs serve --http localhost:8080 -v
 
-To build the Flash socket API file, [Haxe](https://haxe.org/) is required:
+Otherwise one could create a minified config (see `Caddyfile`):
 
-    haxe compile.hxml
+    cd server
+    make
+    caddy
 
-Allow socket connections to the target host (currently localhost) using
-[policyserver.py](http://github.com/digitalbazaar/forge/tree/master/flash/policyserver.py):
+To allow socket connections according to the the config file:
 
-    python policyserver.py -d -v -p 8001 &
+    cd server
+    make caddy
+    ./caddy -type flashsocketpolicy -conf Caddyfile.flashsocketpolicy
 
 To test, visit http://localhost:8080/jssock/ and open the Console tab in the
 Developer Tools (tested with Chrome). Grant permission to use Flash and watch

@@ -71,7 +71,7 @@ type policyContext struct {
 
 func (p *policyContext) InspectServerBlocks(_ string, serverBlocks []caddyfile.ServerBlock) ([]caddyfile.ServerBlock, error) {
 	// Parse a config like:
-	// flashsocketpolicy host:port {
+	// host:port {
 	//     // allow access to port 443 from any domain
 	//     ports 443
 	//     ports 443 *
@@ -86,6 +86,8 @@ func (p *policyContext) InspectServerBlocks(_ string, serverBlocks []caddyfile.S
 			host, port, err := net.SplitHostPort(key)
 			if err != nil {
 				host = key
+			}
+			if port == "" {
 				port = "843"
 			}
 			addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(host, port))
