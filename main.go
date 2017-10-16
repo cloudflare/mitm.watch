@@ -133,7 +133,9 @@ func getSocketApi() *js.Object {
 type Conn struct {
 	socketId     int        // the socket ID
 	ioResult     chan error // result of connect/read attempt
+	readLock     sync.Mutex // mutex to protect connect/read
 	readDeadline time.Time
+	readTimer    *time.Timer
 }
 
 type socketEvent struct {
@@ -244,13 +246,31 @@ func loadPolicy(host, port string) error {
 }
 
 func (s *Conn) readTimeout() <-chan time.Time {
+	var d time.Duration
 	if s.readDeadline.IsZero() {
-		return nil
+		// Returning nil here would result in a "fatal error: all
+		// goroutines are asleep - deadlock!" error because indeed no
+		// goroutines are active (we rely on Flash callbacks to wake
+		// us). As a workaround, use some point "far" in the future.
+		d = 48 * time.Hour
+	} else {
+		d = s.readDeadline.Sub(time.Now())
 	}
-	return time.After(s.readDeadline.Sub(time.Now()))
+	if s.readTimer == nil {
+		s.readTimer = time.NewTimer(d)
+	} else {
+		// under s.readLock, so we got exclusive access here.
+		if !s.readTimer.Stop() {
+			<-s.readTimer.C
+		}
+		s.readTimer.Reset(d)
+	}
+	return s.readTimer.C
 }
 
 func (s *Conn) connect(host, port string) error {
+	s.readLock.Lock()
+	defer s.readLock.Unlock()
 	// TODO make this configurable
 	if err := loadPolicy(host, "8001"); err != nil {
 		return err
@@ -273,6 +293,8 @@ func (s *Conn) connect(host, port string) error {
 // readData tries to read at most n bytes from the socket, blocking until bytes
 // become available.
 func (s *Conn) readData(n int) (string, error) {
+	s.readLock.Lock()
+	defer s.readLock.Unlock()
 	var err error
 
 	// clear past data results, then try to read data and otherwise wait.
