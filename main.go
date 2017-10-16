@@ -45,6 +45,14 @@ func (*keyLogPrinter) Write(line []byte) (int, error) {
 	return len(line), nil
 }
 
+func updateStatus(status string) {
+	if fn := js.Global.Get("updateStatus"); fn != js.Undefined {
+		go func() {
+			fn.Invoke(status)
+		}()
+	}
+}
+
 func addExperiment(exp *Experiment) {
 	if fn := js.Global.Get("addExperiment"); fn != js.Undefined {
 		go func() {
@@ -62,7 +70,10 @@ func updateExperiment(i int, exp *Experiment) {
 }
 
 func main() {
+	updateStatus("booting")
 	once.Do(initSocketApi)
+	updateStatus("booted")
+
 	experiments := []*Experiment{
 		{Domain: ipv4Domain, Version: tls.VersionTLS12},
 		{Domain: ipv4Domain, Version: tls.VersionTLS13},
@@ -180,17 +191,13 @@ func socketCallString(name string, args ...interface{}) (string, error) {
 
 func initSocketApi() {
 	// wait for the SWF to become ready
-	for i := 0; i < 100; i++ {
+	for {
 		socketApi = getSocketApi()
 		if socketApi == nil {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			break
 		}
-	}
-
-	if socketApi == nil {
-		panic("Failed to load Flash plugin")
 	}
 
 	socketApi.Call("subscribe", "console.log") // TODO remove debug

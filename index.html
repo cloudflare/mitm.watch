@@ -1,5 +1,20 @@
 <!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>TLS 1.3 middleboxes test</title>
 <style>
+body:not(.booted) #results,
+body:not(.booted) .results-text,
+body #flash-message {
+    display: none;
+}
+body.booting.flash-please #flash-message {
+    display: block;
+}
+body.booting.flash-please #socketApi {
+    border: 2px solid red;
+}
 #results {
     border-collapse: collapse;
 }
@@ -20,7 +35,16 @@
     background: grey;
 }
 </style>
-<script src="//cdnjs.cloudflare.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
+</head>
+<body>
+<h1>TLS 1.3 middleboxes test</h1>
+<p>
+This page performs some tests to check for middlebox interference with TLS 1.3.
+For that it requires Adobe Flash and TCP port 843 to be open. If this is not the
+case, all tests will fail with <em>N/A</em>.
+</p>
+
+<h2 class="results-text">Results</h2>
 <table id="results">
     <thead>
     <tr>
@@ -31,7 +55,12 @@
     </tr>
     </thead>
 </table>
+<div id="flash-message">
+    Adobe Flash is currently required for its Socket API. Please activate the
+    Flash plugin below.
+</div>
 <div id="socketApi"></div>
+<script src="//cdnjs.cloudflare.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
 <script>
 // HACK: pretend to have a supported flash version
 if (window.chrome) {
@@ -62,7 +91,19 @@ var detectStatus = function(exp) {
         return STATUS_FAIL;
     }
 };
-var addExperiment = function(exp) {
+var updateStatus = function(status) {
+    if (status === "booting") {
+        // script has loaded, waiting for Flash
+        setTimeout(function() {
+            if (document.body.className === "booting") {
+                document.body.className += " flash-please";
+            }
+        }, 1000);
+    } else if (status === "booted") {
+    }
+    document.body.className = status;
+},
+    addExperiment = function(exp) {
     if (results.tBodies.length === 0) {
         results.createTBody();
     }
@@ -95,3 +136,5 @@ var addExperiment = function(exp) {
 };
 </script>
 <script src="jssock.js"></script>
+</body>
+</html>
