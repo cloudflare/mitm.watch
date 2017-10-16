@@ -1,5 +1,5 @@
-# Listen on any address (use ":" to listen with default port 843)
-:8001 {
+# Listen on any address
+[::]:8001 {
 	# Allow access to the given port(s) from the given domain.
 	ports 4433 l.ls-l.info
 }
