@@ -247,6 +247,7 @@ func DialTCP(network, address string) (*Conn, error) {
 		socketId: socketId,
 		ioResult: make(chan error, 1),
 	}
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
 	registerSocket(conn)
 	if err = conn.connect(host, port); err != nil {
 		socketCall("destroy", socketId)
