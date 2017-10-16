@@ -131,8 +131,9 @@ func getSocketApi() *js.Object {
 
 // An open socket
 type Conn struct {
-	socketId int        // the socket ID
-	ioResult chan error // result of connect/read attempt
+	socketId     int        // the socket ID
+	ioResult     chan error // result of connect/read attempt
+	readDeadline time.Time
 }
 
 type socketEvent struct {
@@ -242,6 +243,13 @@ func loadPolicy(host, port string) error {
 	return err
 }
 
+func (s *Conn) readTimeout() <-chan time.Time {
+	if s.readDeadline.IsZero() {
+		return nil
+	}
+	return time.After(s.readDeadline.Sub(time.Now()))
+}
+
 func (s *Conn) connect(host, port string) error {
 	// TODO make this configurable
 	if err := loadPolicy(host, "8001"); err != nil {
@@ -257,8 +265,7 @@ func (s *Conn) connect(host, port string) error {
 	select {
 	case err = <-s.ioResult:
 		return err
-	case <-time.After(2000 * time.Millisecond):
-		// TODO make timeout configurable (SetDeadline?)
+	case <-s.readTimeout():
 		return errors.New("connection timed out")
 	}
 }
@@ -282,8 +289,7 @@ func (s *Conn) readData(n int) (string, error) {
 				b64Data, err = socketCallString("receive", s.socketId, n)
 			}
 
-		case <-time.After(1000 * time.Millisecond):
-			// TODO configurable timeout
+		case <-s.readTimeout():
 			err = errors.New("read timed out")
 		}
 	}
@@ -331,13 +337,17 @@ func (s *Conn) RemoteAddr() net.Addr {
 }
 
 func (s *Conn) SetDeadline(t time.Time) error {
-	return nil
+	if err := s.SetReadDeadline(t); err != nil {
+		return err
+	}
+	return s.SetWriteDeadline(t)
 }
 
 func (s *Conn) SetReadDeadline(t time.Time) error {
+	s.readDeadline = t
 	return nil
 }
 
 func (s *Conn) SetWriteDeadline(t time.Time) error {
-	return nil
+	return errors.New("write deadlines are not supported")
 }
