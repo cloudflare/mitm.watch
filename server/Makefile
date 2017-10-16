@@ -17,7 +17,11 @@ public:
 	mkdir public
 
 public/jssock.js public/jssock.js.map: $(srcdir)/main.go | public
+ifeq ($(DEV),1)
+	$(GOPHERJS) build -o public/jssock.js $<
+else
 	$(GOPHERJS) build -m -o public/jssock.js $<
+endif
 
 public/index.html: $(srcdir)/index.html | public
 	cp $< $@
