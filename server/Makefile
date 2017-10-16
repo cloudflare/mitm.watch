@@ -26,7 +26,7 @@ public/socketapi.swf: $(srcdir)/SocketAPI.hx | public
 	haxe -main SocketAPI -swf $@ -swf-version 13 -cp $(srcdir)
 
 %.gz: %
-	gzip -9k $<
+	gzip -9kf $<
 
 magic := 'This is where other plugins get plugged in'
 insert := '_ "flashsocketpolicy"'
