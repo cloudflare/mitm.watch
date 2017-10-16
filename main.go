@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -14,6 +15,11 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
+const (
+	ipv4Domain = "l4.ls-l.info"
+	ipv6Domain = "l6.ls-l.info"
+)
+
 var (
 	once      sync.Once
 	socketApi *js.Object // the flash object reference
@@ -22,6 +28,14 @@ var (
 	connections       map[int]*Conn
 	connectionsRWLock sync.RWMutex
 )
+
+// Experiments configuration
+type Experiment struct {
+	Domain  string
+	Version uint16
+	Result  string
+	Failed  bool
+}
 
 type keyLogPrinter struct{}
 
@@ -32,14 +46,51 @@ func (*keyLogPrinter) Write(line []byte) (int, error) {
 
 func main() {
 	once.Do(initSocketApi)
-	conn, err := DialTCP("tcp", "localhost:4433")
-	if err != nil {
-		panic(err)
+	experiments := []*Experiment{
+		{Domain: ipv4Domain, Version: tls.VersionTLS12},
+		{Domain: ipv4Domain, Version: tls.VersionTLS13},
+		{Domain: ipv6Domain, Version: tls.VersionTLS12},
+		{Domain: ipv6Domain, Version: tls.VersionTLS13},
+		// should fail as SSL 3.0 is disabled
+		{Domain: ipv6Domain, Version: tls.VersionSSL30},
 	}
+	// randomize addresses (for easier tracking purposes)
+	for _, exp := range experiments {
+		var randBytes [16]byte
+		_, err := rand.Read(randBytes[:])
+		if err != nil {
+			panic("random failed")
+		}
+		exp.Domain = fmt.Sprintf("%x.%s", randBytes, exp.Domain)
+	}
+	var wg sync.WaitGroup
+	for _, exp := range experiments {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := tryTLS(exp.Domain, exp.Version)
+			exp.Result = err.Error()
+			exp.Failed = err != nil
+		}()
+	}
+	wg.Wait()
+	for _, exp := range experiments {
+		// Calling console.log for now because it hides private fields.
+		js.Global.Get("console").Call("log", exp)
+	}
+}
+
+func tryTLS(domain string, version uint16) error {
+	conn, err := DialTCP("tcp", domain+":4433")
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
 	tls_config := &tls.Config{
-		ServerName:   "localhost",
+		ServerName:   domain,
 		KeyLogWriter: &keyLogPrinter{},
-		MaxVersion:   tls.VersionTLS13,
+		MinVersion:   version,
+		MaxVersion:   version,
 	}
 	var rootCAs *x509.CertPool
 	if rootCAs != nil {
@@ -51,15 +102,16 @@ func main() {
 	tls_conn := tls.Client(conn, tls_config)
 	n, err := tls_conn.Write([]byte("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	response := make([]byte, 1024)
 	n, err = tls_conn.Read(response)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println("Response:")
 	fmt.Printf("%s", response[:n])
+	return nil
 }
 
 func socketCall(name string, args ...interface{}) (interface{}, error) {
