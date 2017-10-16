@@ -31,10 +31,11 @@ var (
 
 // Experiments configuration
 type Experiment struct {
-	Domain  string
-	Version uint16
-	Result  string
-	Failed  bool
+	Domain   string
+	Version  uint16
+	Result   string
+	Failed   bool
+	Expected string // expected error message
 }
 
 type keyLogPrinter struct{}
@@ -42,6 +43,22 @@ type keyLogPrinter struct{}
 func (*keyLogPrinter) Write(line []byte) (int, error) {
 	fmt.Println(string(line))
 	return len(line), nil
+}
+
+func addExperiment(exp *Experiment) {
+	if fn := js.Global.Get("addExperiment"); fn != js.Undefined {
+		go func() {
+			fn.Invoke(exp)
+		}()
+	}
+}
+
+func updateExperiment(i int, exp *Experiment) {
+	if fn := js.Global.Get("updateExperiment"); fn != js.Undefined {
+		go func() {
+			fn.Invoke(i, exp)
+		}()
+	}
 }
 
 func main() {
@@ -52,7 +69,9 @@ func main() {
 		{Domain: ipv6Domain, Version: tls.VersionTLS12},
 		{Domain: ipv6Domain, Version: tls.VersionTLS13},
 		// should fail as SSL 3.0 is disabled
-		{Domain: ipv6Domain, Version: tls.VersionSSL30},
+		{Domain: ipv4Domain, Version: tls.VersionSSL30, Expected: "remote error: tls: protocol version not supported"},
+		// should fail as the host does not exist
+		{Domain: "nonexistent.ls-l.info", Version: tls.VersionTLS12, Expected: "connection timed out"},
 	}
 	// randomize addresses (for easier tracking purposes)
 	for _, exp := range experiments {
@@ -62,9 +81,12 @@ func main() {
 			panic("random failed")
 		}
 		exp.Domain = fmt.Sprintf("%x.%s", randBytes, exp.Domain)
+		// display in UI
+		addExperiment(exp)
 	}
 	var wg sync.WaitGroup
-	for _, exp := range experiments {
+	for i, exp := range experiments {
+		i := i
 		exp := exp
 		wg.Add(1)
 		go func() {
@@ -72,10 +94,13 @@ func main() {
 			response, err := tryTLS(exp.Domain, exp.Version)
 			if err != nil {
 				exp.Result = err.Error()
+				exp.Failed = exp.Expected != err.Error()
 			} else {
 				exp.Result = response
+				exp.Failed = exp.Expected != ""
 			}
-			exp.Failed = err != nil
+			// display in UI
+			updateExperiment(i, exp)
 		}()
 	}
 	wg.Wait()
