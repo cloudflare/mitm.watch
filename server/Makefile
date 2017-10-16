@@ -3,14 +3,17 @@ srcdir = $(CURDIR)/..
 GOPHERJS := gopherjs
 CADDY_GOPATH := $(CURDIR)/go
 
-OBJS := public/jssock.js public/jssock.js.map \
-	public/index.html public/socketapi.swf
+OBJS := public/index.html public/jssock.js public/socketapi.swf
 # pre-compress to reduce latency
-OBJS += public/jssock.js.gz public/jssock.js.map.gz
+OBJS += public/jssock.js.gz
+DEV_OBJS := public/jssock.js.map public/jssock.js.map.gz public/main.go
+ifeq ($(DEV),1)
+OBJS += $(DEV_OBJS)
+endif
 
 all: $(OBJS)
 clean:
-	$(RM) $(OBJS)
+	$(RM) $(OBJS) $(DEV_OBJS)
 .PHONY: all clean
 
 public:
@@ -21,6 +24,8 @@ ifeq ($(DEV),1)
 	$(GOPHERJS) build -o public/jssock.js $<
 else
 	$(GOPHERJS) build -m -o public/jssock.js $<
+	sed -e '/sourceMappingURL=/d' -i '' public/jssock.js
+	$(RM) public/jssock.js.map public/jssock.js.map.gz
 endif
 
 public/index.html: $(srcdir)/index.html | public
@@ -28,6 +33,9 @@ public/index.html: $(srcdir)/index.html | public
 
 public/socketapi.swf: $(srcdir)/SocketAPI.hx | public
 	haxe -main SocketAPI -swf $@ -swf-version 13 -cp $(srcdir)
+
+public/main.go: $(srcdir)/main.go | public
+	cp $< $@
 
 %.gz: %
 	gzip -9kf $<
