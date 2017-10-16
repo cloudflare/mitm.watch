@@ -65,11 +65,16 @@ func main() {
 	}
 	var wg sync.WaitGroup
 	for _, exp := range experiments {
+		exp := exp
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := tryTLS(exp.Domain, exp.Version)
-			exp.Result = err.Error()
+			response, err := tryTLS(exp.Domain, exp.Version)
+			if err != nil {
+				exp.Result = err.Error()
+			} else {
+				exp.Result = response
+			}
 			exp.Failed = err != nil
 		}()
 	}
@@ -80,10 +85,10 @@ func main() {
 	}
 }
 
-func tryTLS(domain string, version uint16) error {
+func tryTLS(domain string, version uint16) (string, error) {
 	conn, err := DialTCP("tcp", domain+":4433")
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer conn.Close()
 	tls_config := &tls.Config{
@@ -102,16 +107,16 @@ func tryTLS(domain string, version uint16) error {
 	tls_conn := tls.Client(conn, tls_config)
 	n, err := tls_conn.Write([]byte("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"))
 	if err != nil {
-		return err
+		return "", err
 	}
 	response := make([]byte, 1024)
 	n, err = tls_conn.Read(response)
 	if err != nil {
-		return err
+		return "", err
 	}
 	fmt.Println("Response:")
 	fmt.Printf("%s", response[:n])
-	return nil
+	return string(response[:n]), nil
 }
 
 func socketCall(name string, args ...interface{}) (interface{}, error) {
