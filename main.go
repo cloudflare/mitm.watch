@@ -118,7 +118,7 @@ func main() {
 }
 
 func tryTLS(domain string, version uint16) (string, error) {
-	conn, err := DialTCP("tcp", domain+":4433")
+	conn, err := DialTCP("tcp", net.JoinHostPort(domain, tlsPort))
 	if err != nil {
 		return "", err
 	}
