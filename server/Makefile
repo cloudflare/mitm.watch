@@ -8,12 +8,12 @@ CADDY_GOPATH := $(CURDIR)/go
 #CADDY_BUILD_ARGS := -goos=linux
 
 OBJS := public/index.html public/jssock.js public/socketapi.swf
-# pre-compress to reduce latency
-OBJS += public/jssock.js.gz
 DEV_OBJS := public/jssock.js.map public/jssock.js.map.gz public/main.go
 ifeq ($(DEV),1)
 OBJS += $(DEV_OBJS)
 endif
+# pre-compress to reduce latency
+OBJS += public/jssock.js.gz
 
 all: $(OBJS)
 clean:
