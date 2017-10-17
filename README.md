@@ -19,23 +19,25 @@ API](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/ne
 
 ## Building
 To build the Flash socket API file, [Haxe](https://haxe.org/) must be installed.
-To build the frontend, assuming tls-tris to be checked out in
-`~/repos/tls-tris`:
+To enable TLS 1.3 client and server support, use the pwu/client branch of
+tls-tris:
 
     export GOROOT=$(~/repos/tls-tris/_dev/go.sh env GOROOT)
     export GOPATH=$PWD/go
-    ~/repos/tls-tris/_dev/go.sh get github.com/gopherjs/gopherjs
+    PATH="${GOROOT/GOROOT/go}/bin:$GOPATH/bin:$PATH"
+    go get github.com/gopherjs/gopherjs
 
 During development of the frontend:
 
     ln -s ../.. "$GOPATH/src/jssock"
-    go/bin/gopherjs serve --http localhost:8080 -v
+    gopherjs serve --http localhost:8080 -v
 
 Otherwise one could create a minified config (see `Caddyfile`):
 
     cd server
-    make DEV=1
-    caddy
+    make DEV=1          # make frontend
+    make caddy          # make server with TLS 1.3 support
+    ./caddy -http-port 8080 -https-port 4433 -log stdout
 
 To allow socket connections according to the the config file:
 
