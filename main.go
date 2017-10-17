@@ -18,6 +18,7 @@ import (
 const (
 	ipv4Domain = "l4.ls-l.info"
 	ipv6Domain = "l6.ls-l.info"
+	noDomain   = "nonexistent.ls-l.info"
 )
 
 var (
@@ -32,6 +33,7 @@ var (
 // Experiments configuration
 type Experiment struct {
 	Domain   string
+	IPv6     bool
 	Version  uint16
 	Result   string
 	Failed   bool
@@ -77,12 +79,12 @@ func main() {
 	experiments := []*Experiment{
 		{Domain: ipv4Domain, Version: tls.VersionTLS12},
 		{Domain: ipv4Domain, Version: tls.VersionTLS13},
-		{Domain: ipv6Domain, Version: tls.VersionTLS12},
-		{Domain: ipv6Domain, Version: tls.VersionTLS13},
+		{Domain: ipv6Domain, IPv6: true, Version: tls.VersionTLS12},
+		{Domain: ipv6Domain, IPv6: true, Version: tls.VersionTLS13},
 		// should fail as SSL 3.0 is disabled
 		{Domain: ipv4Domain, Version: tls.VersionSSL30, Expected: "remote error: tls: protocol version not supported"},
 		// should fail as the host does not exist
-		{Domain: "nonexistent.ls-l.info", Version: tls.VersionTLS12, Expected: "connection timed out"},
+		{Domain: noDomain, Version: tls.VersionTLS12, Expected: "connection timed out"},
 	}
 	// randomize addresses (for easier tracking purposes)
 	for _, exp := range experiments {

@@ -78,9 +78,6 @@ var tlsVersions = {
     0x303: "TLS 1.2",
     0x304: "TLS 1.3 (draft -18)"
 };
-var isIPv4 = function(domain) {
-    return !/.l6\.ls-l\.info$/.test(domain);
-};
 var STATUS_OK = "OK", STATUS_NA = "N/A", STATUS_FAIL = "Fail";
 var detectStatus = function(exp) {
     if (!exp.Failed) {
@@ -109,7 +106,7 @@ var updateStatus = function(status) {
     }
     var item = results.tBodies[0].insertRow();
     item.insertCell().textContent = tlsVersions[exp.Version];
-    item.insertCell().textContent = isIPv4(exp.Domain) ? "IPv4" : "IPv6";
+    item.insertCell().textContent = exp.IPv6 ? "IPv6" : "IPv4";
     item.insertCell().textContent = "Pending";
     item.insertCell(); // Description
 },
