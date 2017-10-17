@@ -34,7 +34,7 @@ During development of the frontend:
 Otherwise one could create a minified config (see `Caddyfile`):
 
     cd server
-    make
+    make DEV=1
     caddy
 
 To allow socket connections according to the the config file:

@@ -15,12 +15,6 @@ import (
 	"github.com/gopherjs/gopherjs/js"
 )
 
-const (
-	ipv4Domain = "l4.ls-l.info"
-	ipv6Domain = "l6.ls-l.info"
-	noDomain   = "nonexistent.ls-l.info"
-)
-
 var (
 	once      sync.Once
 	socketApi *js.Object // the flash object reference

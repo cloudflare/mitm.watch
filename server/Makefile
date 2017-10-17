@@ -19,13 +19,19 @@ clean:
 public:
 	mkdir public
 
-public/jssock.js public/jssock.js.map: $(srcdir)/main.go | public
 ifeq ($(DEV),1)
-	$(GOPHERJS) build -o public/jssock.js $<
+CONFFILE := $(srcdir)/config_dev.go
 else
-	$(GOPHERJS) build -m -o public/jssock.js $<
+CONFFILE := $(srcdir)/config_prod.go
+endif
+
+public/jssock.js public/jssock.js.map: $(srcdir)/main.go $(CONFFILE) | public
+ifeq ($(DEV),1)
+	$(GOPHERJS) build -o public/jssock.js $^
+else
+	$(GOPHERJS) build -o public/jssock.js $^ -m --tags prod
 	sed -e '/sourceMappingURL=/d' -i '' public/jssock.js
-	$(RM) public/jssock.js.map public/jssock.js.map.gz
+	$(RM) public/main.go public/jssock.js.map public/jssock.js.map.gz
 endif
 
 public/index.html: $(srcdir)/index.html | public
