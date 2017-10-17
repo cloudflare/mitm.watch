@@ -2,6 +2,10 @@
 srcdir = $(CURDIR)/..
 GOPHERJS := gopherjs
 CADDY_GOPATH := $(CURDIR)/go
+# Set to 1 to force rebuilding caddy
+#CADDY_FORCE_REBUILD := 1
+# Build for another platform
+#CADDY_BUILD_ARGS := -goos=linux
 
 OBJS := public/index.html public/jssock.js public/socketapi.swf
 # pre-compress to reduce latency
@@ -55,6 +59,11 @@ $(caddydir):
 	grep -q $(magic) $(caddydir)/caddymain/run.go
 	grep -q $(insert) $(caddydir)/caddymain/run.go || \
 		sed -e "$$(printf '/%s/a\\\n%s' $(magic) $(insert))" -i '' $(caddydir)/caddymain/run.go
+	# Allow TLS 1.3 to be selected.
+	sed -e '/tls1\.2/{n;s/^}/"tls1.3": tls.VersionTLS13,}/;}' -i '' $(caddydir)/../caddytls/config.go
+ifeq ($(CADDY_FORCE_REBUILD),1)
+.PHONY: $(caddydir)
+endif
 
 caddybuildsdir := $(CADDY_GOPATH)/src/github.com/caddyserver/builds
 $(caddybuildsdir):
@@ -66,5 +75,5 @@ $(CADDY_GOPATH)/src/flashsocketpolicy/server.go: server.go
 
 caddy: $(CADDY_GOPATH)/src/flashsocketpolicy/server.go \
 	$(caddydir) $(caddybuildsdir)
-	cd $(caddydir) && GOPATH=$(CADDY_GOPATH) go run build.go
+	cd $(caddydir) && GOPATH=$(CADDY_GOPATH) go run build.go $(CADDY_BUILD_ARGS)
 	mv $(caddydir)/caddy $@
