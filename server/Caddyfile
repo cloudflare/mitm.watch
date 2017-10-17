@@ -4,12 +4,15 @@ https://l.ls-l.info {
 	root public/
 	tls self_signed
 	log /dev/stdout
+	index index.html
 }
 
 https://*.l4.ls-l.info,
 https://*.l6.ls-l.info {
 	root public/
+	index index.html
+	# TODO maybe fix a key such that we can verify the cert?
 	tls self_signed {
-		#protocols tls1.3
+		protocols tls1.2 tls1.3
 	}
 }
