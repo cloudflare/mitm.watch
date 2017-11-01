@@ -3,3 +3,4 @@ go
 server/public/
 caddy
 socketapi.swf
+.DS_Store

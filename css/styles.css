@@ -1,0 +1,34 @@
+/*mitm.watch css styles*/
+/*v1.0*/
+
+body:not(.booted) #results,
+body:not(.booted) .results-text,
+body #flash-message {
+  display: none;
+}
+body.booting.flash-please #flash-message {
+  display: block;
+}
+body.booting.flash-please #socketApi {
+  border: 2px solid red;
+}
+#results {
+  border-collapse: collapse;
+}
+#results th,
+#results td {
+  padding: 3px 5px;
+}
+#results td:nth-child(1) {
+  white-space: nowrap;
+}
+#results tr.status-ok td:nth-child(3) {
+  background: lightgreen;
+}
+#results tr.status-fail td:nth-child(3) {
+  background: pink;
+}
+#results tr.status-na td:nth-child(3) {
+  background: grey;
+}
+
