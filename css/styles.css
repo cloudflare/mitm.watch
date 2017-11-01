@@ -32,3 +32,152 @@ body.booting.flash-please #socketApi {
   background: grey;
 }
 
+/*page style css*/
+
+body {
+  font-family: 'Open Sans', sans-serif;
+  background-color: #E5E5E5;
+  color: #333333;
+  margin: 0;
+}
+
+.cf-gradient {
+  height: 150px;
+  z-index: 0;
+  background: #E5E5E5; /* For browsers that do not support gradients */
+  background: -webkit-linear-gradient(left, #56547C , #7BC0DF); /* For Safari 5.1 to 6.0 */
+  background: -o-linear-gradient(right, #56547C , #7BC0DF); /* For Opera 11.1 to 12.0 */
+  background: -moz-linear-gradient(right, #56547C , #7BC0DF); /* For Firefox 3.6 to 15 */
+  background: linear-gradient(to right, #56547C , #7BC0DF); /* Standard syntax */
+}
+
+.cf-gradient2 {
+  z-index: 100;
+  height: 5px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0.5rem 0;
+  background: #FFFFFF; /* For browsers that do not support gradients */
+  background: -webkit-linear-gradient(left, #5FB1D2 , #73CDA7); /* For Safari 5.1 to 6.0 */
+  background: -o-linear-gradient(right, #5FB1D2 , #73CDA7); /* For Opera 11.1 to 12.0 */
+  background: -moz-linear-gradient(right, #5FB1D2 , #73CDA7); /* For Firefox 3.6 to 15 */
+  background: linear-gradient(to right, #5FB1D2 , #73CDA7); /* Standard syntax */
+}
+
+.hover-box {
+  z-index: 100;
+  background-color: #FFFFFF;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem 0;
+}
+
+.main-hover-box {
+  border: 1px solid #DDDDDD;
+  box-shadow: 1px 2px 8px rgba(0, 0, 0, .2);
+  width: 60%;
+  margin: -100px auto 0 auto;
+  z-index: 100;
+}
+
+.box-content {
+  padding: 0 4rem 4rem 4rem;
+  min-height: 50vh;
+}
+
+h1 {
+  font-size: 2rem;
+  text-align: center;
+  font-weight: 400;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+p {
+  font-size: 1rem;
+  line-height: 2;
+}
+
+.footer {
+  background-color: #FFFFFF;
+  height: 10vh;
+  position: absolute; 
+  left: 0 ; right: 0; bottom: 0;
+}
+
+.footer-text {
+  float: right;
+  margin-right: 3rem;
+  margin-top: 3vh;
+  font-size: 0.75rem;
+}
+
+table {
+  width: 100%;
+  border: 1px solid #DDDDDD;
+  border-spacing: 0;
+  text-align: left;
+  font-size: 0.9rem;
+  border-collapse: collapse;
+}
+
+table thead {
+  background-color: #dedede;
+}
+
+tr {
+  border: 1px solid #DDDDDD;
+}
+
+tr td:nth-child(3) {
+  font-weight: 600;
+  text-align: center;
+  padding: 0;
+  width: 8%;
+}
+
+tr td:nth-child(4) {
+  width: 70%;
+}
+
+th {
+  height: 6vh;
+  padding-left: 1%;
+}
+
+td {
+  padding: 8px 10px;
+}
+
+/*Delete this section later */
+td:nth-child(1) {
+  white-space: nowrap;
+}
+
+tr.status-ok td:nth-child(3) {
+  background: lightgreen;
+}
+tr.status-fail td:nth-child(3) {
+  background: pink;
+}
+tr.status-na td:nth-child(3) {
+  background: #e0e0e0;
+}
+
+#flash-message2 {
+  margin: 4vh 0;
+}
+
+.flash-warning {
+  color: red;
+  display: inline;
+  padding-right: 2%;
+}
+.flash-text {
+  display: inline;
+  line-height: 2;
+}
+
