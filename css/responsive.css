@@ -4,6 +4,9 @@
 }
 
 @media screen and (max-width: 480px) { /* iPhone landscape */
+  body {
+    background-color: #FFFFFF;
+  }
 	.main-hover-box {
 	  border: none;
 	  box-shadow: none;
@@ -20,6 +23,14 @@
   }
   .cf-gradient {
     display: none;
+  }
+  .footer {
+    background-color: #E5E5E5;
+  }
+  .footer-text {
+    float: none;
+    text-align: center;
+    margin-right: 0;
   }
 }
 

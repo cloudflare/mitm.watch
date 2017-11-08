@@ -26,64 +26,6 @@
       case, all tests will fail with <em>N/A</em>.
       </p>
 
-  <!-- Remove this section later -->
-      <h2>Results</h2>
-      <div class="table-outer">
-        <table>
-          <thead>
-          <tr>
-            <th>TLS Version</th>
-            <th>IP Version</th>
-            <th>Status</th>
-            <th>Remark</th>
-          </tr>
-          </thead>
-          <tr class="status-ok">
-            <td>TLS 1.3 (draft -18)</td>
-            <td>IPv4</td> 
-            <td>OK</td>
-            <td>Matches expected: remote error: tls: protocol version not supported</td>
-          </tr>
-
-          <tr class="status-fail">
-            <td>TLS 1.2</td>
-            <td>IPv4</td> 
-            <td>Fail</td>
-            <td></td>
-          </tr>
-
-          <tr class="status-ok">
-            <td>TLS 1.2</td>
-            <td>IPv4</td> 
-            <td>OK</td>
-            <td></td>
-          </tr>
-
-          <tr class="status-na">
-            <td>TLS 1.2</td>
-            <td>IPv4</td> 
-            <td>N/A</td>
-            <td>[SecurityErrorEvent type="securityError" bubbles=false cancelable=false eventPhase=2 text="Error #2048"]
-            </td>
-          </tr>
-        </table>
-      </div>
-
-      <div id="flash-message2">
-        <div class="flash-warning">
-          <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
-        </div>
-        <div class="flash-text">
-          Adobe Flash is currently required for its Socket API. Please activate the
-          Flash plugin below.
-        </div>
-        <div class="flash-text2">
-          Click and allow Flash to enable test
-        </div>
-      </div>
-
-<!-- ===== -->
-
       <h2 class="results-text">Results</h2>
 
       <table id="results">
@@ -98,8 +40,16 @@
     </table>
 
       <div id="flash-message">
-        Adobe Flash is currently required for its Socket API. Please activate the
-        Flash plugin below.
+        <div class="flash-warning">
+          <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+        </div>
+        <div class="flash-text">
+          Adobe Flash is currently required for its Socket API. Please activate the
+          Flash plugin below.
+        </div>
+        <div class="flash-text2">
+          Click and allow Flash to enable test
+        </div>
       </div>
 
       <div id="socketApi"></div>
@@ -107,9 +57,9 @@
   </div>
 </div>
 
-<!-- <div class="footer">
+<div class="footer">
   <p class="footer-text">&copy;2017 Cloudflare</p>
-</div> -->
+</div>
 
 <script src="//cdnjs.cloudflare.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
 <script>

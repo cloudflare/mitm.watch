@@ -6,12 +6,25 @@ body:not(.booted) .results-text,
 body #flash-message {
   display: none;
 }
-body.booting.flash-please #flash-message {
-  display: block;
-}
 body.booting.flash-please #socketApi {
   border: 2px solid red;
 }
+
+body.booting.flash-please #flash-message {
+  margin: 30px 0 20px 0;
+}
+
+body.booting.flash-please .flash-warning {
+  color: red;
+  display: inline;
+  padding-right: 2%;
+}
+body.booting.flash-please .flash-text {
+  display: inline;
+  line-height: 2;
+}
+
+
 #results {
   border-collapse: collapse;
 }
@@ -22,6 +35,9 @@ body.booting.flash-please #socketApi {
 #results td:nth-child(1) {
   white-space: nowrap;
 }
+#results td:nth-child(2) {
+  width: 12%;
+}
 #results tr.status-ok td:nth-child(3) {
   background: lightgreen;
 }
@@ -29,7 +45,7 @@ body.booting.flash-please #socketApi {
   background: pink;
 }
 #results tr.status-na td:nth-child(3) {
-  background: grey;
+  background: #e0e0e0;
 }
 
 /*page style css*/
@@ -103,16 +119,16 @@ p {
 
 .footer {
   background-color: #FFFFFF;
-  height: 10vh;
+  height: 75px;
   position: absolute; 
   left: 0 ; right: 0; bottom: 0;
 }
 
 .footer-text {
   float: right;
-  margin-right: 3rem;
-  margin-top: 3vh;
-  font-size: 0.75rem;
+  margin-right: 5%;
+  margin-top: 25px;
+  font-size: 16px;
 }
 
 table {
@@ -152,35 +168,3 @@ td {
   padding: 8px 10px;
 }
 
-/* Delete this section later */
-td:nth-child(1) {
-  white-space: nowrap;
-}
-
-td:nth-child(2) {
-  width: 12%;
-}
-
-tr.status-ok td:nth-child(3) {
-  background: lightgreen;
-}
-tr.status-fail td:nth-child(3) {
-  background: pink;
-}
-tr.status-na td:nth-child(3) {
-  background: #e0e0e0;
-}
-
-#flash-message2 {
-  margin: 30px 0 20px 0;
-}
-
-.flash-warning {
-  color: red;
-  display: inline;
-  padding-right: 2%;
-}
-.flash-text {
-  display: inline;
-  line-height: 2;
-}
