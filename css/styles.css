@@ -69,20 +69,20 @@ body {
   background-color: #FFFFFF;
   width: 100%;
   margin: 0 auto;
-  padding: 1rem 0;
+  padding: 1rem 0 0 0;
 }
 
 .main-hover-box {
   border: 1px solid #DDDDDD;
   box-shadow: 1px 2px 8px rgba(0, 0, 0, .2);
-  width: 60%;
+  width: 75%;
   margin: -100px auto 0 auto;
   z-index: 100;
 }
 
 .box-content {
-  padding: 0 4rem 4rem 4rem;
-  min-height: 50vh;
+  padding: 0 4rem 2rem 4rem;
+  min-height: 300px;
 }
 
 h1 {
@@ -144,7 +144,7 @@ tr td:nth-child(4) {
 }
 
 th {
-  height: 6vh;
+  height: 55px;
   padding-left: 1%;
 }
 
@@ -152,7 +152,7 @@ td {
   padding: 8px 10px;
 }
 
-/*Delete this section later */
+/* Delete this section later */
 td:nth-child(1) {
   white-space: nowrap;
 }
@@ -172,7 +172,7 @@ tr.status-na td:nth-child(3) {
 }
 
 #flash-message2 {
-  margin: 4vh 0;
+  margin: 30px 0 20px 0;
 }
 
 .flash-warning {
@@ -184,4 +184,3 @@ tr.status-na td:nth-child(3) {
   display: inline;
   line-height: 2;
 }
-

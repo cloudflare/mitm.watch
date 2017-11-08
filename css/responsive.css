@@ -1,0 +1,35 @@
+/*Responsive Breakpoints*/
+@media screen and (max-width: 320px) { /* iPhone portrait */
+
+}
+
+@media screen and (max-width: 480px) { /* iPhone landscape */
+	.main-hover-box {
+	  border: none;
+	  box-shadow: none;
+	  width: 100%;
+	  margin: 0 auto;
+	  z-index: 100;
+	}	
+  h1 {
+    font-size: 1.5rem;
+  }
+  .box-content {
+    padding: 0 2rem 1rem 2rem;
+    min-height: 300px;
+  }
+  .cf-gradient {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 768px) { /* iPad portrait */
+  .table-outer {
+    overflow-x:scroll;
+  }
+}
+
+@media screen and (max-width: 1024px) { /* iPad landscape */
+
+}
+
