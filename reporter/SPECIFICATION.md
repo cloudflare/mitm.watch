@@ -52,8 +52,14 @@ Per-report queries:
 - Expected TLS version, actual version
 
 
-## DATA MODEL
-Test
+## Data model
+In the following models, frames is an array of objects (serialized as JSON):
+ - Time: time (UTC)
+ - IsRead: bool (true if from network, false if written)
+ - Data: string (base64-encoded TCP segment bytes)
+
+### Test
+A single test run.
 - TestID: string
 - CreateTime: time
 - UpdateTime: time
@@ -66,12 +72,13 @@ Test
 ClientVersion, FlashVersion, UserAgent exist to detect possible problems with
 the test at a later point, allowing bad reports to be discarded.
 
-
-ServerCapture
+### ServerCapture
+Records the result of a test as observed by the server.
 - TestID: foreignKey to Test.TestID
 - BeginTime: time
 - EndTime: time
 - MaxTLSVersion: uint16
+- ActualTLSVersion: uint16
 - Frames
 - KeyLog: string
 - Result: bool
@@ -82,12 +89,13 @@ A single Test can have multiple ServerCaptures as weird MITM boxes may exist
 that first do a connection to learn about the certificate/capabilities. Not
 sure if it is a real problem, but let's be prepared for this possibility.
 
-
-ClientCapture:
+### ClientCapture
+Records the result of a test, provided by the client.
 - TestID: foreignKey to Test.TestID
 - BeginTime: time
 - EndTime: time
 - MaxTLSVersion: uint16
+- ActualTLSVersion: uint16
 - Frames
 - KeyLog: string
 - Result: bool
@@ -95,20 +103,22 @@ ClientCapture:
 A single Test must have a unique (TestID, MaxTLSVersion).
 
 
-Frames is an array of objects (serialized as JSON):
- - Time: time (UTC)
- - IsRead: bool (true if from network, false if written)
- - Data: string (base64-encoded TCP segment bytes)
-
-
 ## API
 TODO reporting functionality needs more consideration
 
 Relevant for determining TLS server to connect to for tests:
 - domain: depends on IPv4/IPv6
-- SNI: subtestid + domain
+- hostname (SNI): subtestid + domain
 
-### POST /tests/new
+The intention is that the client does not have to care about the exact hostname
+contents while the server can parse the hostname and identify the subtest type
+(whether it is IPv6 and the maximum TLS version).
+
+Request and response bodies are in JSON unless stated otherwise.
+In general PUT/POST/DELETE requests can fail due to an invalid CSRF token (403)
+or ratelimiting.
+
+### POST /tests
 Request-Body:
 - clientversion: string
 - flashversion: string
@@ -117,24 +127,79 @@ Request-Body:
 Response-Body:
 - testid: string
 - tests: array
-  - subtestid: string
+  - hostname: string
   - ipv6: bool
   - version: uint16
 
-### PUT /tests/:testid/results/:subtestid:
+### PUT /tests/:testid/clientresults/:hostname
 Request-Body:
 - frames: array
 - keylog: string
 - result: bool
 
+Errors:
+- 403 - test duration was exceeded, no updates are allowed.
+- 409 - the results for this subtest already exist.
+
 ### PUT /tests/:testid/comment
 Request-Body:
 - comment: string
 
+### DELETE /tests/:testid
+Removes the results of the given test including its captures.
+
+### GET /tests
+Response-Body:
+Array of resources `/tests/:testid`.
+
+TODO pagination
+
 ### GET /tests/:testid
 Response-Body:
-(model contents)
+- testid: string
+- createtime: time
+- clientip: string
+- usercomment: string
+- result: bool
+- mitm: bool
+
+Test result is false (failed) if any of the captures failed.
+mitm is true if a MITM is detected based on an analysis of captures.
+
+TODO what to do if test has not completed yet?
 
 ### GET /tests/:testid/results
 Response-Body:
-(array of model contents)
+Array of:
+- maxtlsversion: uint16
+- ipv6: bool
+- result: bool
+- mitm: bool
+
+Fields are based on the client results.
+mitm is true if a MITM is detected based on a comparison with the server
+results.
+
+### GET /tests/:testid/client.pcap
+Response-Body:
+Synthetic libpcap-formatted capture file as seen from the client side containing
+the results for all subtests.
+
+The source and destination addresses are looked up from the last server capture
+for a given subtest. If no server capture was found for whatever reason, use a
+dummy value (like ::1).
+
+### GET /tests/:testid/server.pcap
+Response-Body:
+Synthetic libpcap-formatted capture file as seen from the server side containing
+the results for all subtests.
+
+### GET /tests/:testid/keylog.txt
+Response-Body:
+Key log file containing all keys used for the client and server captures using
+the [NSS Key Log format](https://developer.mozilla.org/NSS_Key_Log_Format).
+
+
+## Future work
+Possible features:
+- Detect MITM from frames or HTTP request: user agent mismatch is suspicious.
