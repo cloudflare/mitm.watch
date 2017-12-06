@@ -23,7 +23,7 @@ Server receives incoming connection, then responds normally. Optionally it logs
 the session if at the start:
  1. Split SNI into (TestID, IPv6, MaxTLSVersion). Skip on failure.
  2. Check if Test model (based on TestID) is known. If not, skip.
- 4. Check if CreateTime is older than X minutes. If it is, skip.
+ 4. Check if CreatedAt is older than X minutes. If it is, skip.
 
 At the end these conditions are also checked, and only if satisfied, the
 ServerCapture model is saved.
@@ -61,27 +61,43 @@ In the following models, frames is an array of objects (serialized as JSON):
 ### Test
 A single test run.
 - TestID: string
-- CreateTime: time
-- UpdateTime: time
+- CreatedAt: time
+- UpdatedAt: time
 - ClientIP: string
 - ClientVersion: string (commit of this project)
 - FlashVersion: string
 - UserAgent: string (navigator.userAgent)
 - UserComment: string
+- HasFailed: bool (true if any of the captures failed)
+- IsMitm: bool (true if any capture suggests that a MITM happened)
 
 ClientVersion, FlashVersion, UserAgent exist to detect possible problems with
 the test at a later point, allowing bad reports to be discarded.
 
+### Subtest
+Records a test configuration and its result.
+- TestID: foreignKey to Test
+- SubtestID: string
+- MaxTLSVersion: uint16
+- IsIPv6: bool
+- HasFailed: bool
+- IsMitm: bool
+
+Note: HasFailed is true if any of the capture results failed.
+TODO remove HasFailed here?
+
+A single Test must have a unique (TestID, MaxTLSVersion, IsIPv6).
+
 ### ServerCapture
 Records the result of a test as observed by the server.
-- TestID: foreignKey to Test.TestID
-- BeginTime: time
-- EndTime: time
-- MaxTLSVersion: uint16
-- ActualTLSVersion: uint16
+- SubtestID: foreignKey to Subtest
+- CreatedAt: time
+- BeginTime: time (start of subtest, could be earlier than the first frame)
+- EndTime: time (end of subtest, could be later than the last frame)
+- ActualTLSVersion: uint16 (negotiated version or 0 on failure)
 - Frames
 - KeyLog: string
-- Result: bool
+- HasFailed: bool
 - ClientIP: string
 - ServerIP: string
 
@@ -91,17 +107,18 @@ sure if it is a real problem, but let's be prepared for this possibility.
 
 ### ClientCapture
 Records the result of a test, provided by the client.
-- TestID: foreignKey to Test.TestID
-- BeginTime: time
-- EndTime: time
-- MaxTLSVersion: uint16
-- ActualTLSVersion: uint16
+- SubtestID: foreignKey to Subtest
+- CreatedAt: time
+- BeginTime: time (start of subtest, could be earlier than the first frame)
+- EndTime: time (end of subtest, could be later than the last frame)
+- ActualTLSVersion: uint16 (negotiated version or 0 on failure)
 - Frames
 - KeyLog: string
-- Result: bool
+- HasFailed: bool
 
-A single Test must have a unique (TestID, MaxTLSVersion).
-
+SubtestID must be unique (a Subtest must have a unique ClientCapture).
+BeginTime, EndTime, MaxTLSVersion and ActualTLSVersion should match the
+information in Frames.
 
 ## API
 TODO reporting functionality needs more consideration
@@ -120,65 +137,74 @@ or ratelimiting.
 
 ### POST /tests
 Request-Body:
-- clientversion: string
-- flashversion: string
-- useragent: string
+- client\_version: string
+- flash\_version: string
+- user\_agent: string
 
 Response-Body:
 - testid: string
-- tests: array
+- subtests: array of
+  - subtestid: string
   - hostname: string
-  - ipv6: bool
-  - version: uint16
+  - is\_ipv6: bool
+  - max\_tls\_version: uint16
 
-### PUT /tests/:testid/clientresults/:hostname
+### GET /tests
+Response-Body:
+- result: array of resources `/tests/:testid`.
+
+TODO pagination
+
+### POST /tests/:testid/clientresults
 Request-Body:
+- begin\_time: time
+- end\_time: time
+- max\_tls\_version: uint16
+- actual\_tls\_version: uint16
 - frames: array
-- keylog: string
-- result: bool
+- key\_log: string
+- has\_failed: bool
+- is\_ipv6: bool
 
 Errors:
 - 403 - test duration was exceeded, no updates are allowed.
 - 409 - the results for this subtest already exist.
 
-### PUT /tests/:testid/comment
+### PATCH /tests/:testid
 Request-Body:
-- comment: string
+- user\_comment: string
+
+Note: fields like client\_version are readonly after creation and cannot be
+modified.
 
 ### DELETE /tests/:testid
 Removes the results of the given test including its captures.
 
-### GET /tests
-Response-Body:
-Array of resources `/tests/:testid`.
-
-TODO pagination
-
 ### GET /tests/:testid
 Response-Body:
 - testid: string
-- createtime: time
-- clientip: string
-- usercomment: string
-- result: bool
-- mitm: bool
-
-Test result is false (failed) if any of the captures failed.
-mitm is true if a MITM is detected based on an analysis of captures.
+- created\_at: time
+- updated\_at: time
+- client\_ip: string
+- client\_version: string
+- flash\_version: string
+- user\_agent: string
+- user\_comment: string
+- has\_result: bool
+- is\_mitm: bool
 
 TODO what to do if test has not completed yet?
+TODO hide internal fields like client\_version, flash\_version, user\_agent as
+these are probably not relevant for interpreting test results.
 
-### GET /tests/:testid/results
+### GET /tests/:testid/subtests
 Response-Body:
-Array of:
-- maxtlsversion: uint16
-- ipv6: bool
-- result: bool
-- mitm: bool
-
-Fields are based on the client results.
-mitm is true if a MITM is detected based on a comparison with the server
-results.
+- result: array of:
+  - subtestid: string
+  - max\_tls\_version: uint16
+  - is\_ipv6: bool
+  - has\_failed: bool
+  - is\_mitm: bool
 
 ### GET /tests/:testid/client.pcap
 Response-Body:
