@@ -21,12 +21,14 @@ TODO check compatibility with early data or other TLS 1.3 configurations?
 ## Workflow
 Server receives incoming connection, then responds normally. Optionally it logs
 the session if at the start:
- 1. Split SNI into (TestID, IPv6, MaxTLSVersion). Skip on failure.
- 2. Check if Test model (based on TestID) is known. If not, skip.
+ 1. Extract SubtestID from SNI. Skip on failure.
+ 2. Lookup (TestID, CreatedAt, IsIPv6, MaxTLSVersion) based on SubtestID.
+    Skip on failure.
+ 3. Skip if IsIPv6 does not match the connection.
  4. Check if CreatedAt is older than X minutes. If it is, skip.
 
-At the end these conditions are also checked, and only if satisfied, the
-ServerCapture model is saved.
+At the end condition 4 is also checked, and only if satisfied, the ServerCapture
+object is saved.
 
 Client requests test cases and executes them. After a subtest is complete, the
 subtest result is sent to the server (only if a connection could be setup).
@@ -70,6 +72,7 @@ A single test run.
 - UserComment: string
 - HasFailed: bool (true if any of the captures failed)
 - IsMitm: bool (true if any capture suggests that a MITM happened)
+- IsPending: bool (true if changes are still accepted)
 
 ClientVersion, FlashVersion, UserAgent exist to detect possible problems with
 the test at a later point, allowing bad reports to be discarded.
@@ -89,7 +92,7 @@ TODO remove HasFailed here?
 A single Test must have a unique (TestID, MaxTLSVersion, IsIPv6).
 
 ### ServerCapture
-Records the result of a test as observed by the server.
+Records the result of a subtest as observed by the server.
 - SubtestID: foreignKey to Subtest
 - CreatedAt: time
 - BeginTime: time (start of subtest, could be earlier than the first frame)
@@ -101,12 +104,12 @@ Records the result of a test as observed by the server.
 - ClientIP: string
 - ServerIP: string
 
-A single Test can have multiple ServerCaptures as weird MITM boxes may exist
+A single Subtest can have multiple ServerCaptures as weird MITM boxes may exist
 that first do a connection to learn about the certificate/capabilities. Not
 sure if it is a real problem, but let's be prepared for this possibility.
 
 ### ClientCapture
-Records the result of a test, provided by the client.
+Records the result of a subtest, provided by the client.
 - SubtestID: foreignKey to Subtest
 - CreatedAt: time
 - BeginTime: time (start of subtest, could be earlier than the first frame)
@@ -121,8 +124,6 @@ BeginTime, EndTime, MaxTLSVersion and ActualTLSVersion should match the
 information in Frames.
 
 ## API
-TODO reporting functionality needs more consideration
-
 Relevant for determining TLS server to connect to for tests:
 - domain: depends on IPv4/IPv6
 - hostname (SNI): subtestid + domain
@@ -132,8 +133,13 @@ contents while the server can parse the hostname and identify the subtest type
 (whether it is IPv6 and the maximum TLS version).
 
 Request and response bodies are in JSON unless stated otherwise.
-In general PUT/POST/DELETE requests can fail due to an invalid CSRF token (403)
-or ratelimiting.
+In general PATCH/POST/DELETE requests can fail due to an invalid CSRF token
+(403) or ratelimiting.
+
+Captures and comments can no longer be submitted if any of these are true:
+- IsPending is false (intended to be changed by the client).
+- CreatedAt is older than an hour.
+- UpdatedAt is older than 15 minutes.
 
 ### POST /tests
 Request-Body:
@@ -142,10 +148,9 @@ Request-Body:
 - user\_agent: string
 
 Response-Body:
-- testid: string
+- test\_id: string
 - subtests: array of
-  - subtestid: string
-  - hostname: string
+  - subtest\_id: string
   - is\_ipv6: bool
   - max\_tls\_version: uint16
 
@@ -167,22 +172,27 @@ Request-Body:
 - is\_ipv6: bool
 
 Errors:
-- 403 - test duration was exceeded, no updates are allowed.
+- 403 - test is readonly, no more changes are allowed.
 - 409 - the results for this subtest already exist.
 
 ### PATCH /tests/:testid
 Request-Body:
 - user\_comment: string
+- is\_pending: bool (optional, but only `false` is allowed)
+
+Errors:
+- 403 - test is readonly, no more changes are allowed.
 
 Note: fields like client\_version are readonly after creation and cannot be
-modified.
+modified. Once `is_pending` is set to `false`, no more captures or patches can
+be submitted.
 
 ### DELETE /tests/:testid
 Removes the results of the given test including its captures.
 
 ### GET /tests/:testid
 Response-Body:
-- testid: string
+- test\_id: string
 - created\_at: time
 - updated\_at: time
 - client\_ip: string
@@ -190,21 +200,25 @@ Response-Body:
 - flash\_version: string
 - user\_agent: string
 - user\_comment: string
-- has\_result: bool
+- has\_failed: bool
 - is\_mitm: bool
+- is\_pending: bool
 
-TODO what to do if test has not completed yet?
 TODO hide internal fields like client\_version, flash\_version, user\_agent as
 these are probably not relevant for interpreting test results.
 
 ### GET /tests/:testid/subtests
 Response-Body:
-- result: array of:
-  - subtestid: string
-  - max\_tls\_version: uint16
-  - is\_ipv6: bool
-  - has\_failed: bool
-  - is\_mitm: bool
+- result: array of resources `/tests/:testid/subtests/:subtestid`.
+
+### GET /tests/:testid/subtests/:subtestid
+Response-Body:
+- test\_id: string
+- subtest\_id: string
+- max\_tls\_version: uint16
+- is\_ipv6: bool
+- has\_failed: bool
+- is\_mitm: bool
 
 ### GET /tests/:testid/client.pcap
 Response-Body:
