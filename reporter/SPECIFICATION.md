@@ -21,8 +21,8 @@ TODO check compatibility with early data or other TLS 1.3 configurations?
 ## Workflow
 Server receives incoming connection, then responds normally. Optionally it logs
 the session if at the start:
- 1. Extract SubtestID from SNI. Skip on failure.
- 2. Lookup (TestID, CreatedAt, IsIPv6, MaxTLSVersion) based on SubtestID.
+ 1. Extract (TestID, Number) from SNI. Skip on failure.
+ 2. Lookup (CreatedAt, IsIPv6, MaxTLSVersion) based on (TestID, Number).
     Skip on failure.
  3. Skip if IsIPv6 does not match the connection.
  4. Check if CreatedAt is older than X minutes. If it is, skip.
@@ -60,9 +60,14 @@ In the following models, frames is an array of objects (serialized as JSON):
  - IsRead: bool (true if from network, false if written)
  - Data: string (base64-encoded TCP segment bytes)
 
+Primary keys should not be exposed through the API, instead a unique ID (for
+example, a UUID) should be used instead (this also applies to foreign keys).
+This prevents enumeration.
+
 ### Test
 A single test run.
-- TestID: string
+- ID: int (primary key)
+- TestID: string (externally visible)
 - CreatedAt: time
 - UpdatedAt: time
 - ClientIP: string
@@ -79,8 +84,9 @@ the test at a later point, allowing bad reports to be discarded.
 
 ### Subtest
 Records a test configuration and its result.
+- ID: int (primary key)
 - TestID: foreignKey to Test
-- SubtestID: string
+- Number: int (unique within a test)
 - MaxTLSVersion: uint16
 - IsIPv6: bool
 - HasFailed: bool
@@ -89,11 +95,12 @@ Records a test configuration and its result.
 Note: HasFailed is true if any of the capture results failed.
 TODO remove HasFailed here?
 
-A single Test must have a unique (TestID, MaxTLSVersion, IsIPv6).
+A single Test must have a unique (TestID, Number) and should have a unique
+(TestID, MaxTLSVersion, IsIPv6).
 
 ### ServerCapture
 Records the result of a subtest as observed by the server.
-- SubtestID: foreignKey to Subtest
+- SubtestID: foreignKey to Subtest (internal)
 - CreatedAt: time
 - BeginTime: time (start of subtest, could be earlier than the first frame)
 - EndTime: time (end of subtest, could be later than the last frame)
@@ -110,7 +117,7 @@ sure if it is a real problem, but let's be prepared for this possibility.
 
 ### ClientCapture
 Records the result of a subtest, provided by the client.
-- SubtestID: foreignKey to Subtest
+- SubtestID: foreignKey to Subtest (internal)
 - CreatedAt: time
 - BeginTime: time (start of subtest, could be earlier than the first frame)
 - EndTime: time (end of subtest, could be later than the last frame)
@@ -119,14 +126,15 @@ Records the result of a subtest, provided by the client.
 - KeyLog: string
 - HasFailed: bool
 
-SubtestID must be unique (a Subtest must have a unique ClientCapture).
+A Subtest must have a unique ClientCapture.
 BeginTime, EndTime, MaxTLSVersion and ActualTLSVersion should match the
 information in Frames.
 
 ## API
 Relevant for determining TLS server to connect to for tests:
 - domain: depends on IPv4/IPv6
-- hostname (SNI): subtestid + domain
+- hostname (SNI): testid + number + domain. E.g. if TestID is `abcd`, Number is
+  `1` and domain is `ipv6.example.com`, use `abcd-1.ipv6.example.com`.
 
 The intention is that the client does not have to care about the exact hostname
 contents while the server can parse the hostname and identify the subtest type
@@ -150,7 +158,7 @@ Request-Body:
 Response-Body:
 - test\_id: string
 - subtests: array of
-  - subtest\_id: string
+  - number: string
   - is\_ipv6: bool
   - max\_tls\_version: uint16
 
@@ -209,12 +217,12 @@ these are probably not relevant for interpreting test results.
 
 ### GET /tests/:testid/subtests
 Response-Body:
-- result: array of resources `/tests/:testid/subtests/:subtestid`.
+- result: array of resources `/tests/:testid/subtests/:number`.
 
-### GET /tests/:testid/subtests/:subtestid
+### GET /tests/:testid/subtests/:number
 Response-Body:
 - test\_id: string
-- subtest\_id: string
+- numberstring
 - max\_tls\_version: uint16
 - is\_ipv6: bool
 - has\_failed: bool
