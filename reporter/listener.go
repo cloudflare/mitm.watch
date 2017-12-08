@@ -15,6 +15,9 @@ func newListener(ln net.Listener) *listener {
 	return &listener{ln}
 }
 
+// a TLS record containing a fatal alert for unrecognized_name.
+var tlsRecordUnrecognizedName = []byte{21, 3, 1, 0, 2, 2, 112}
+
 // handleConnection processes a new connection. If it claims the connection
 // (e.g. if it decides to proxy the connection), then it will return true.
 // Otherwise (if the request must be handled by ourselves), it returns the
@@ -47,6 +50,7 @@ func (ln *listener) handleConnection(c net.Conn) (net.Conn, bool) {
 		return wrappedConn, false
 	case originAddress == "":
 		log.Printf("%s - no upstream configured", remoteAddr)
+		c.Write(tlsRecordUnrecognizedName)
 		c.Close()
 		return nil, true
 	default:
