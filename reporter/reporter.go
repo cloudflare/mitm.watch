@@ -3,36 +3,40 @@ package main
 import (
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/gin-gonic/gin"
 )
 
 type reporter struct {
-	*httprouter.Router
+	*gin.Engine
 }
 
-const apiPrefix = "/api"
+const apiPrefix = "/api/v1"
 
-func stubHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	http.Error(w, "not implemented yet", 501)
+func stubHandler(c *gin.Context) {
+	c.String(http.StatusNotImplemented, "not implemented yet")
 }
 
 func newReporter() *reporter {
-	router := httprouter.New()
+	router := gin.Default()
+	rep := &reporter{router}
 
 	// TODO CSRF protection
 	// TODO authentication
 
-	router.POST(apiPrefix+"/tests", stubHandler)
-	router.GET(apiPrefix+"/tests", stubHandler)
-	router.POST(apiPrefix+"/tests/:testid/clientresults", stubHandler)
-	router.PATCH(apiPrefix+"/tests/:testid", stubHandler)
-	router.DELETE(apiPrefix+"/tests/:testid", stubHandler)
-	router.GET(apiPrefix+"/tests/:testid", stubHandler)
-	router.GET(apiPrefix+"/tests/:testid/subtests", stubHandler)
-	router.GET(apiPrefix+"/tests/:testid/subtests/:number", stubHandler)
-	router.GET(apiPrefix+"/tests/:testid/client.pcap", stubHandler)
-	router.GET(apiPrefix+"/tests/:testid/server.pcap", stubHandler)
-	router.GET(apiPrefix+"/tests/:testid/keylog.txt", stubHandler)
+	v1 := router.Group(apiPrefix)
+	{
+		v1.POST("/tests", stubHandler)
+		v1.GET("/tests", stubHandler)
+		v1.POST("/tests/:testid/clientresults", stubHandler)
+		v1.PATCH("/tests/:testid", stubHandler)
+		v1.DELETE("/tests/:testid", stubHandler)
+		v1.GET("/tests/:testid", stubHandler)
+		v1.GET("/tests/:testid/subtests", stubHandler)
+		v1.GET("/tests/:testid/subtests/:number", stubHandler)
+		v1.GET("/tests/:testid/client.pcap", stubHandler)
+		v1.GET("/tests/:testid/server.pcap", stubHandler)
+		v1.GET("/tests/:testid/keylog.txt", stubHandler)
+	}
 
-	return &reporter{router}
+	return rep
 }
