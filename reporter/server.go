@@ -41,8 +41,7 @@ func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host = strings.ToLower(host)
 
 	if host == hostReporter {
-		// TODO implement reporter handler
-		//h.reporterHandler.ServeHTTP(w, r)
+		h.reporterHandler.ServeHTTP(w, r)
 		return
 	}
 	if strings.HasSuffix(host, hostSuffixIPv4) || strings.HasSuffix(host, hostSuffixIPv6) {
@@ -62,7 +61,9 @@ func main() {
 	}
 	wl := newListener(l)
 
-	hostRouter := &hostHandler{}
+	hostRouter := &hostHandler{
+		reporterHandler: newReporter(),
+	}
 
 	tlsConfig := &tls.Config{
 		GetCertificate: getCertificate,
