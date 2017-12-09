@@ -39,6 +39,7 @@ type Frame struct {
 }
 
 type Capture struct {
+	ID               int       `json:"-"`
 	SubtestID        int       `json:"-"`
 	CreatedAt        time.Time `json:"created_at"`
 	BeginTime        time.Time `json:"begin_time"`
