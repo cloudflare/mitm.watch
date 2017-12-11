@@ -2,15 +2,20 @@ package main
 
 import (
 	"crypto/tls"
+	"database/sql"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 const (
+	connInfo = "sslmode=disable"
+
 	// configuration used in listener.go
 	originAddress  = ""
 	sessionTimeout = 60 * time.Second
@@ -33,12 +38,7 @@ type hostHandler struct {
 }
 
 func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Strip port number from host
-	host, _, _ := net.SplitHostPort(r.Host)
-	if host == "" {
-		host = r.Host
-	}
-	host = strings.ToLower(host)
+	host := strings.ToLower(parseHost(r.Host))
 
 	if host == hostReporter {
 		h.reporterHandler.ServeHTTP(w, r)
@@ -54,6 +54,14 @@ func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	db, err := sql.Open("postgres", connInfo)
+	if err != nil {
+		panic(err)
+	}
+	if err = db.Ping(); err != nil {
+		panic(err)
+	}
+
 	address := ":4433"
 	l, err := net.Listen("tcp", address)
 	if err != nil {
@@ -62,7 +70,7 @@ func main() {
 	wl := newListener(l)
 
 	hostRouter := &hostHandler{
-		reporterHandler: newReporter(),
+		reporterHandler: newReporter(db),
 	}
 
 	tlsConfig := &tls.Config{
