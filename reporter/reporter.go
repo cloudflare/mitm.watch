@@ -41,7 +41,7 @@ func newReporter(db *sql.DB) *reporter {
 		authorized.POST("/tests/:testid/clientresults", stubHandler)
 		authorized.PATCH("/tests/:testid", stubHandler)
 		authorized.DELETE("/tests/:testid", stubHandler)
-		authorized.GET("/tests/:testid", stubHandler)
+		authorized.GET("/tests/:testid", rep.listTest)
 		authorized.GET("/tests/:testid/subtests", stubHandler)
 		authorized.GET("/tests/:testid/subtests/:number", stubHandler)
 		authorized.GET("/tests/:testid/client.pcap", stubHandler)
@@ -67,6 +67,12 @@ func (*reporter) dbError(c *gin.Context, err error) {
 		"error": "database error",
 	})
 	fmt.Println(err)
+}
+
+func (*reporter) getTestID(c *gin.Context) (string, error) {
+	testID := c.Param("testid")
+	// TODO validate testID, must look like a UUID
+	return testID, nil
 }
 
 type createTestRequest struct {
@@ -159,4 +165,37 @@ func (r *reporter) listTests(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, tests)
+}
+
+func (r *reporter) listTest(c *gin.Context) {
+	testID, err := r.getTestID(c)
+	if err != nil {
+		return
+	}
+	rows, err := QueryTests(r.db, `WHERE test_id = $1`, testID)
+	if err != nil {
+		r.dbError(c, err)
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		test, err := ScanTest(rows)
+		if err != nil {
+			r.dbError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, test)
+		return
+	}
+
+	err = rows.Err()
+	if err != nil {
+		r.dbError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{
+		"error": "test not found",
+	})
 }

@@ -66,7 +66,16 @@ func (model *Test) Create(tx *sql.Tx) error {
 }
 
 // Query the tests model
-func QueryTests(db *sql.DB) (*sql.Rows, error) {
+func QueryTests(db *sql.DB, args ...interface{}) (*sql.Rows, error) {
+	extraQuery := ""
+	if len(args) > 0 {
+		var ok bool
+		extraQuery, ok = args[0].(string)
+		if !ok {
+			return nil, errors.New("argument must be a SQL string")
+		}
+		args = args[1:]
+	}
 	rows, err := db.Query(`
 	SELECT
 		id,
@@ -82,7 +91,7 @@ func QueryTests(db *sql.DB) (*sql.Rows, error) {
 		is_mitm,
 		is_pending
 	FROM tests
-	`)
+	`+extraQuery, args...)
 	return rows, err
 }
 
