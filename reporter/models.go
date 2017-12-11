@@ -22,9 +22,17 @@ type Test struct {
 	IsPending     bool      `json:"is_pending"`
 }
 
+// Specification of a subtest
+type SubtestSpec struct {
+	Number        int    `json:"number"`
+	MaxTLSVersion uint16 `json:"max_tls_version"`
+	IsIPv6        bool   `json:"is_ipv6"`
+}
+
+// Actual instantiation of a subtest.
 type Subtest struct {
 	ID            int    `json:"-"`
-	TestID        string `json:"test_id"`
+	TestID        int    `json:"-"`
 	Number        int    `json:"number"`
 	MaxTLSVersion uint16 `json:"max_tls_version"`
 	IsIPv6        bool   `json:"is_ipv6"`

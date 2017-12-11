@@ -221,8 +221,7 @@ Response-Body:
 
 ### GET /tests/:testid/subtests/:number
 Response-Body:
-- test\_id: string
-- numberstring
+- number: int
 - max\_tls\_version: uint16
 - is\_ipv6: bool
 - has\_failed: bool
