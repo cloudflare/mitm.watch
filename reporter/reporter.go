@@ -20,35 +20,36 @@ func stubHandler(c *gin.Context) {
 	c.String(http.StatusNotImplemented, "not implemented yet")
 }
 
+func authRequired(c *gin.Context) {
+	// TODO authentication
+	c.Next()
+}
+
 func newReporter(db *sql.DB) *reporter {
 	router := gin.Default()
 	rep := &reporter{router, db}
 
 	// TODO CSRF protection
-	// TODO authentication
 
 	v1 := router.Group(apiPrefix)
 	{
 		v1.POST("/tests", rep.createTest)
-		v1.GET("/tests", stubHandler)
-		v1.POST("/tests/:testid/clientresults", stubHandler)
-		v1.PATCH("/tests/:testid", stubHandler)
-		v1.DELETE("/tests/:testid", stubHandler)
-		v1.GET("/tests/:testid", stubHandler)
-		v1.GET("/tests/:testid/subtests", stubHandler)
-		v1.GET("/tests/:testid/subtests/:number", stubHandler)
-		v1.GET("/tests/:testid/client.pcap", stubHandler)
-		v1.GET("/tests/:testid/server.pcap", stubHandler)
-		v1.GET("/tests/:testid/keylog.txt", stubHandler)
+	}
+	authorized := v1.Group("/", authRequired)
+	{
+		authorized.GET("/tests", rep.listTests)
+		authorized.POST("/tests/:testid/clientresults", stubHandler)
+		authorized.PATCH("/tests/:testid", stubHandler)
+		authorized.DELETE("/tests/:testid", stubHandler)
+		authorized.GET("/tests/:testid", stubHandler)
+		authorized.GET("/tests/:testid/subtests", stubHandler)
+		authorized.GET("/tests/:testid/subtests/:number", stubHandler)
+		authorized.GET("/tests/:testid/client.pcap", stubHandler)
+		authorized.GET("/tests/:testid/server.pcap", stubHandler)
+		authorized.GET("/tests/:testid/keylog.txt", stubHandler)
 	}
 
 	return rep
-}
-
-type createTestRequest struct {
-	ClientVersion string `json:"client_version"`
-	FlashVersion  string `json:"flash_version"`
-	UserAgent     string `json:"user_agent"`
 }
 
 // Client versions that are allowed to submit tests.
@@ -66,6 +67,12 @@ func (*reporter) dbError(c *gin.Context, err error) {
 		"error": "database error",
 	})
 	fmt.Println(err)
+}
+
+type createTestRequest struct {
+	ClientVersion string `json:"client_version"`
+	FlashVersion  string `json:"flash_version"`
+	UserAgent     string `json:"user_agent"`
 }
 
 func (r *reporter) createTest(c *gin.Context) {
@@ -126,4 +133,30 @@ func (r *reporter) createTest(c *gin.Context) {
 			"subtests": subtestSpecs,
 		})
 	}
+}
+
+func (r *reporter) listTests(c *gin.Context) {
+	rows, err := QueryTests(r.db)
+	if err != nil {
+		r.dbError(c, err)
+		return
+	}
+	defer rows.Close()
+
+	tests := []*Test{}
+	for rows.Next() {
+		test, err := ScanTest(rows)
+		if err != nil {
+			r.dbError(c, err)
+			return
+		}
+		tests = append(tests, test)
+	}
+	err = rows.Err()
+	if err != nil {
+		r.dbError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, tests)
 }

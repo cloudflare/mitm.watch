@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"net"
 )
 
 // Create a new Test model. Required field: ClientIP. Fields that are updated:
@@ -45,7 +47,7 @@ func (model *Test) Create(tx *sql.Tx) error {
 	`,
 		//&model.ID,
 		&model.TestID,
-		//&model.CreatedAt
+		//&model.CreatedAt,
 		//&model.UpdatedAt,
 		&clientIP,
 		&model.ClientVersion,
@@ -61,6 +63,55 @@ func (model *Test) Create(tx *sql.Tx) error {
 		&model.UpdatedAt,
 	)
 	return err
+}
+
+// Query the tests model
+func QueryTests(db *sql.DB) (*sql.Rows, error) {
+	rows, err := db.Query(`
+	SELECT
+		id,
+		test_id,
+		created_at,
+		updated_at,
+		client_ip,
+		client_version,
+		flash_version,
+		user_agent,
+		user_comment,
+		has_failed,
+		is_mitm,
+		is_pending
+	FROM tests
+	`)
+	return rows, err
+}
+
+// Populates a Test model instance from the result set by scanning it.
+func ScanTest(rows *sql.Rows) (*Test, error) {
+	model := new(Test)
+	var clientIP []byte
+	err := rows.Scan(
+		&model.ID,
+		&model.TestID,
+		&model.CreatedAt,
+		&model.UpdatedAt,
+		&clientIP,
+		&model.ClientVersion,
+		&model.FlashVersion,
+		&model.UserAgent,
+		&model.UserComment,
+		&model.HasFailed,
+		&model.IsMitm,
+		&model.IsPending,
+	)
+	if err != nil {
+		return nil, err
+	}
+	model.ClientIP = net.ParseIP(string(clientIP))
+	if model.ClientIP == nil {
+		return nil, fmt.Errorf("Could not parse client IP: %v", clientIP)
+	}
+	return model, nil
 }
 
 // Create a new Subtest model. Required field: TestID. Fields that is updated:
