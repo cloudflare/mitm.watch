@@ -146,8 +146,7 @@ In general PATCH/POST/DELETE requests can fail due to an invalid CSRF token
 
 Captures and comments can no longer be submitted if any of these are true:
 - IsPending is false (intended to be changed by the client).
-- CreatedAt is older than an hour.
-- UpdatedAt is older than 15 minutes.
+- CreatedAt is older than 15 minutes.
 
 ### POST /tests
 Request-Body:

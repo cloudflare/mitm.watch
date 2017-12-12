@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -155,6 +156,60 @@ func (model *Subtest) Create(tx *sql.Tx) error {
 		&model.IsMitm,
 	).Scan(
 		&model.ID,
+	)
+	return err
+}
+
+// Create a new ClientCapture model. Required field: SubtestID, Frames. Fields
+// that are updated: ID, CreatedAt.
+func (model *ClientCapture) Create(tx *sql.Tx) error {
+	if model.SubtestID == 0 {
+		return errors.New("SubtestID must be initialized!")
+	}
+	if model.Frames == nil {
+		return errors.New("Frames must be initialized")
+	}
+	frames, err := json.Marshal(model.Frames)
+	if err != nil {
+		return err
+	}
+	err = tx.QueryRow(`
+	INSERT INTO client_captures (
+		-- id,
+		subtest_id,
+		created_at,
+		begin_time,
+		end_time,
+		actual_tls_version,
+		frames,
+		key_log,
+		has_failed
+	) VALUES (
+		--              -- id,
+		$1,             -- subtest_id,
+		now(),          -- created_at,
+		$2,             -- begin_time,
+		$3,             -- end_time,
+		$4,             -- actual_tls_version,
+		$5,             -- frames,
+		$6,             -- key_log,
+		$7              -- has_failed
+	) RETURNING
+		id,
+		created_at
+	`,
+		//&model.ID,
+		&model.SubtestID,
+		//&model.CreatedAt,
+		&model.BeginTime,
+		&model.EndTime,
+		&model.ActualTLSVersion,
+		&frames,
+		&model.KeyLog,
+		&model.HasFailed,
+	).Scan(
+		&model.ID,
+		&model.CreatedAt,
 	)
 	return err
 }

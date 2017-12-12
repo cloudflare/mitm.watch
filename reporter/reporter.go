@@ -2,9 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,7 +42,7 @@ func newReporter(db *sql.DB) *reporter {
 	authorized := v1.Group("/", authRequired)
 	{
 		authorized.GET("/tests", rep.listTests)
-		authorized.POST("/tests/:testid/clientresults", stubHandler)
+		authorized.POST("/tests/:testid/clientresults", rep.addClientResult)
 		authorized.PATCH("/tests/:testid", stubHandler)
 		authorized.DELETE("/tests/:testid", rep.removeTest)
 		authorized.GET("/tests/:testid", rep.listTest)
@@ -143,6 +145,133 @@ func (r *reporter) createTest(c *gin.Context) {
 			"test_id":  test.TestID,
 			"subtests": subtestSpecs,
 		})
+	}
+}
+
+type addClientResultRequest struct {
+	Number           int       `json:"number"`
+	BeginTime        time.Time `json:"begin_time"`
+	EndTime          time.Time `json:"end_time"`
+	ActualTLSVersion uint16    `json:"actual_tls_version"`
+	Frames           []Frame   `json:"frames"`
+	KeyLog           string    `json:"key_log"`
+	HasFailed        bool      `json:"has_failed"`
+}
+
+func addClientResultRequestToClientCapture(r *addClientResultRequest) (*ClientCapture, error) {
+	if len(r.Frames) == 0 {
+		return nil, errors.New("Frames is required")
+	}
+	for frameNo, frame := range r.Frames {
+		if len(frame.Data) == 0 {
+			return nil, fmt.Errorf("Frame number %d has no data", frameNo+1)
+		}
+	}
+
+	// unpopulated fields: ID, CreatedAt, SubtestID
+	return &ClientCapture{
+		Capture{
+			BeginTime:        r.BeginTime,
+			EndTime:          r.EndTime,
+			ActualTLSVersion: r.ActualTLSVersion,
+			Frames:           r.Frames,
+			KeyLog:           r.KeyLog,
+			HasFailed:        r.HasFailed,
+		},
+	}, nil
+}
+
+func (r *reporter) addClientResult(c *gin.Context) {
+	testID, ok := r.getTestID(c)
+	if !ok {
+		return
+	}
+
+	var json addClientResultRequest
+	if err := c.BindJSON(&json); err == nil {
+		clientCapture, err := addClientResultRequestToClientCapture(&json)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		// check if (sub)test exists and whether it is allowed to be
+		// modified (pending)
+		var isPending, isEditable bool
+		err = r.db.QueryRow(`
+		SELECT
+			subtests.id,
+			is_pending,
+			now() - created_at < $3
+		FROM tests
+		JOIN subtests
+		ON tests.id = subtests.test_id
+		WHERE 
+			tests.test_id = $1 AND
+			subtests.number = $2
+		`, testID, json.Number, defaultConfig.MutableTestPeriodSecs).Scan(
+			&clientCapture.SubtestID,
+			&isPending,
+			&isEditable,
+		)
+		switch {
+		case err == sql.ErrNoRows:
+			c.JSON(http.StatusNotFound, errTestNotFound)
+			return
+		case err != nil:
+			r.dbError(c, err)
+			return
+		}
+
+		// if resource is locked, do not perform further changes.
+		if !isPending || !isEditable {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "test can no longer be modified",
+			})
+			return
+		}
+
+		// check for duplicate tests
+		var dummy int
+		err = r.db.QueryRow(`
+		SELECT 1
+		FROM client_captures
+		WHERE subtest_id = $1
+		`, clientCapture.SubtestID).Scan(&dummy)
+		switch {
+		case err == sql.ErrNoRows:
+			// ok, no duplicate.
+		case err != nil:
+			r.dbError(c, err)
+			return
+		default:
+			c.JSON(http.StatusConflict, gin.H{
+				"error": "test submission was already received",
+			})
+			return
+		}
+
+		tx, err := r.db.Begin()
+		if err != nil {
+			r.dbError(c, err)
+			return
+		}
+		defer func() {
+			if tx != nil {
+				tx.Rollback()
+			}
+		}()
+
+		err = clientCapture.Create(tx)
+		if err != nil {
+			r.dbError(c, err)
+			return
+		}
+
+		tx.Commit()
+		tx = nil
 	}
 }
 
