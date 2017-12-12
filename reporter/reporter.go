@@ -16,7 +16,8 @@ const apiPrefix = "/api/v1"
 
 type reporter struct {
 	*gin.Engine
-	db *sql.DB
+	db     *sql.DB
+	config Config
 }
 
 var errTestNotFound = gin.H{"error": "test not found"}
@@ -32,7 +33,7 @@ func authRequired(c *gin.Context) {
 
 func newReporter(db *sql.DB) *reporter {
 	router := gin.Default()
-	rep := &reporter{router, db}
+	rep := &reporter{router, db, defaultConfig}
 
 	// TODO CSRF protection
 
@@ -114,7 +115,7 @@ func (r *reporter) createTest(c *gin.Context) {
 			UserAgent:     json.UserAgent,
 			IsPending:     true,
 		}
-		subtestSpecs := defaultConfig.Subtests
+		subtestSpecs := r.config.Subtests
 
 		tx, err := r.db.Begin()
 		if err != nil {
@@ -223,7 +224,7 @@ func (r *reporter) addClientResult(c *gin.Context) {
 		WHERE 
 			tests.test_id = $1 AND
 			subtests.number = $2
-		`, testID, subtestNumber, defaultConfig.MutableTestPeriodSecs).Scan(
+		`, testID, subtestNumber, r.config.MutableTestPeriodSecs).Scan(
 			&clientCapture.SubtestID,
 			&isPending,
 			&isEditable,
@@ -281,6 +282,8 @@ func (r *reporter) addClientResult(c *gin.Context) {
 			r.dbError(c, err)
 			return
 		}
+
+		// TODO set IsPending if all subtests are complete
 
 		tx.Commit()
 		tx = nil
