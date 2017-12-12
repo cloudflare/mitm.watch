@@ -167,20 +167,6 @@ Response-Body:
 
 TODO pagination
 
-### POST /tests/:testid/clientresults
-Request-Body:
-- number: int
-- begin\_time: time
-- end\_time: time
-- actual\_tls\_version: uint16
-- frames: array
-- key\_log: string
-- has\_failed: bool
-
-Errors:
-- 403 - test is readonly, no more changes are allowed.
-- 409 - the results for this subtest already exist.
-
 ### PATCH /tests/:testid
 Request-Body:
 - user\_comment: string
@@ -224,6 +210,19 @@ Response-Body:
 - is\_ipv6: bool
 - has\_failed: bool
 - is\_mitm: bool
+
+### PUT /tests/:testid/subtests/:number/clientresult
+Request-Body:
+- begin\_time: time
+- end\_time: time
+- actual\_tls\_version: uint16
+- frames: array
+- key\_log: string
+- has\_failed: bool
+
+Errors:
+- 403 - test is readonly, no more changes are allowed.
+- 409 - the results for this subtest already exist.
 
 ### GET /tests/:testid/client.pcap
 Response-Body:

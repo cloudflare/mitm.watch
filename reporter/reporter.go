@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -38,11 +39,11 @@ func newReporter(db *sql.DB) *reporter {
 	v1 := router.Group(apiPrefix)
 	{
 		v1.POST("/tests", rep.createTest)
+		v1.POST("/tests/:testid/subtests/:number/clientresult", rep.addClientResult)
 	}
 	authorized := v1.Group("/", authRequired)
 	{
 		authorized.GET("/tests", rep.listTests)
-		authorized.POST("/tests/:testid/clientresults", rep.addClientResult)
 		authorized.PATCH("/tests/:testid", stubHandler)
 		authorized.DELETE("/tests/:testid", rep.removeTest)
 		authorized.GET("/tests/:testid", rep.listTest)
@@ -80,6 +81,13 @@ func (*reporter) getTestID(c *gin.Context) (string, bool) {
 		return "", false
 	}
 	return testID, true
+}
+
+func (*reporter) getSubtestNumber(c *gin.Context) (int, bool) {
+	if n, err := strconv.Atoi(c.Param("number")); err == nil {
+		return n, true
+	}
+	return 0, false
 }
 
 type createTestRequest struct {
@@ -186,6 +194,10 @@ func (r *reporter) addClientResult(c *gin.Context) {
 	if !ok {
 		return
 	}
+	subtestNumber, ok := r.getSubtestNumber(c)
+	if !ok {
+		return
+	}
 
 	var json addClientResultRequest
 	if err := c.BindJSON(&json); err == nil {
@@ -211,7 +223,7 @@ func (r *reporter) addClientResult(c *gin.Context) {
 		WHERE 
 			tests.test_id = $1 AND
 			subtests.number = $2
-		`, testID, json.Number, defaultConfig.MutableTestPeriodSecs).Scan(
+		`, testID, subtestNumber, defaultConfig.MutableTestPeriodSecs).Scan(
 			&clientCapture.SubtestID,
 			&isPending,
 			&isEditable,
