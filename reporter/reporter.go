@@ -16,6 +16,8 @@ type reporter struct {
 	db *sql.DB
 }
 
+var errTestNotFound = gin.H{"error": "test not found"}
+
 func stubHandler(c *gin.Context) {
 	c.String(http.StatusNotImplemented, "not implemented yet")
 }
@@ -40,7 +42,7 @@ func newReporter(db *sql.DB) *reporter {
 		authorized.GET("/tests", rep.listTests)
 		authorized.POST("/tests/:testid/clientresults", stubHandler)
 		authorized.PATCH("/tests/:testid", stubHandler)
-		authorized.DELETE("/tests/:testid", stubHandler)
+		authorized.DELETE("/tests/:testid", rep.removeTest)
 		authorized.GET("/tests/:testid", rep.listTest)
 		authorized.GET("/tests/:testid/subtests", stubHandler)
 		authorized.GET("/tests/:testid/subtests/:number", stubHandler)
@@ -72,9 +74,7 @@ func (*reporter) dbError(c *gin.Context, err error) {
 func (*reporter) getTestID(c *gin.Context) (string, bool) {
 	testID := c.Param("testid")
 	if !ValidateUUID(testID) {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "test not found",
-		})
+		c.JSON(http.StatusNotFound, errTestNotFound)
 		return "", false
 	}
 	return testID, true
@@ -200,7 +200,30 @@ func (r *reporter) listTest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNotFound, gin.H{
-		"error": "test not found",
-	})
+	c.JSON(http.StatusNotFound, errTestNotFound)
+}
+
+func (r *reporter) removeTest(c *gin.Context) {
+	testID, ok := r.getTestID(c)
+	if !ok {
+		return
+	}
+	result, err := r.db.Exec(`DELETE FROM tests WHERE test_id = $1`, testID)
+	if err != nil {
+		r.dbError(c, err)
+		return
+	}
+
+	n, err := result.RowsAffected()
+	if err != nil {
+		r.dbError(c, err)
+		return
+	}
+
+	if n > 0 {
+		c.Status(http.StatusNoContent)
+		return
+	}
+
+	c.JSON(http.StatusNotFound, errTestNotFound)
 }

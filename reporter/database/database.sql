@@ -16,7 +16,7 @@ CREATE TABLE tests (
 );
 CREATE TABLE subtests (
 	id                  serial      PRIMARY KEY,
-	test_id             integer     NOT NULL REFERENCES tests,
+	test_id             integer     NOT NULL REFERENCES tests ON DELETE CASCADE,
 	number              integer     NOT NULL,
 	max_tls_version     integer     NOT NULL,
 	is_ipv6             boolean     NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE subtests (
 );
 CREATE TABLE client_captures (
 	id                  serial      PRIMARY KEY,
-	subtest_id          integer     NOT NULL REFERENCES subtests,
+	subtest_id          integer     NOT NULL REFERENCES subtests ON DELETE CASCADE,
 	created_at          timestamp   NOT NULL,
 	begin_time          timestamp   NOT NULL,
 	end_time            timestamp   NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE client_captures (
 );
 CREATE TABLE server_captures (
 	id                  serial      PRIMARY KEY,
-	subtest_id          integer     NOT NULL REFERENCES subtests,
+	subtest_id          integer     NOT NULL REFERENCES subtests ON DELETE CASCADE,
 	created_at          timestamp   NOT NULL,
 	begin_time          timestamp   NOT NULL,
 	end_time            timestamp   NOT NULL,

@@ -99,6 +99,7 @@ func makeTable(i interface{}, uniqueRequirement string) {
 			if otherTable != tableName {
 				colType = "integer"
 				extras += fmt.Sprintf(" REFERENCES %s", otherTable)
+				extras += " ON DELETE CASCADE"
 			}
 		}
 
