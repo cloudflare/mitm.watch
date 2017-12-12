@@ -69,10 +69,15 @@ func (*reporter) dbError(c *gin.Context, err error) {
 	fmt.Println(err)
 }
 
-func (*reporter) getTestID(c *gin.Context) (string, error) {
+func (*reporter) getTestID(c *gin.Context) (string, bool) {
 	testID := c.Param("testid")
-	// TODO validate testID, must look like a UUID
-	return testID, nil
+	if !ValidateUUID(testID) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "test not found",
+		})
+		return "", false
+	}
+	return testID, true
 }
 
 type createTestRequest struct {
@@ -168,8 +173,8 @@ func (r *reporter) listTests(c *gin.Context) {
 }
 
 func (r *reporter) listTest(c *gin.Context) {
-	testID, err := r.getTestID(c)
-	if err != nil {
+	testID, ok := r.getTestID(c)
+	if !ok {
 		return
 	}
 	rows, err := QueryTests(r.db, `WHERE test_id = $1`, testID)
