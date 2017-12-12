@@ -158,7 +158,7 @@ Request-Body:
 Response-Body:
 - test\_id: string
 - subtests: array of
-  - number: string
+  - number: int
   - is\_ipv6: bool
   - max\_tls\_version: uint16
 
@@ -170,14 +170,13 @@ TODO pagination
 
 ### POST /tests/:testid/clientresults
 Request-Body:
+- number: int
 - begin\_time: time
 - end\_time: time
-- max\_tls\_version: uint16
 - actual\_tls\_version: uint16
 - frames: array
 - key\_log: string
 - has\_failed: bool
-- is\_ipv6: bool
 
 Errors:
 - 403 - test is readonly, no more changes are allowed.
