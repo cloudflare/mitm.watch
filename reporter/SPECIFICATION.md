@@ -140,9 +140,10 @@ The intention is that the client does not have to care about the exact hostname
 contents while the server can parse the hostname and identify the subtest type
 (whether it is IPv6 and the maximum TLS version).
 
-Request and response bodies are in JSON unless stated otherwise.
-In general PATCH/POST/DELETE requests can fail due to an invalid CSRF token
-(403) or ratelimiting.
+Request and response bodies are in JSON unless stated otherwise. To protect
+against CSRF, the `X-Requested-With` header must be set. In general
+PATCH/POST/DELETE requests can fail due to missing CSRF headers (403) or
+ratelimiting.
 
 Captures and comments can no longer be submitted if any of these are true:
 - IsPending is false (intended to be changed by the client).

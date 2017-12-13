@@ -22,9 +22,22 @@ type reporter struct {
 
 var errTestNotFound = gin.H{"error": "test not found"}
 var errSubTestNotFound = gin.H{"error": "subtest not found"}
+var errCsrf = gin.H{"error": "missing X-Requested-With header"}
 
 func stubHandler(c *gin.Context) {
 	c.String(http.StatusNotImplemented, "not implemented yet")
+}
+
+// csrfProtection requires the X-Requested-With header to be set for requests
+// with non-safe methods.
+func csrfProtection(c *gin.Context) {
+	method := c.Request.Method
+	if !(method == "HEAD" || method == "GET" || method == "OPTIONS") &&
+		c.GetHeader("X-Requested-With") == "" {
+		c.AbortWithStatusJSON(http.StatusForbidden, errCsrf)
+		return
+	}
+	c.Next()
 }
 
 func authRequired(c *gin.Context) {
@@ -36,7 +49,7 @@ func newReporter(db *sql.DB) *reporter {
 	router := gin.Default()
 	rep := &reporter{router, db, defaultConfig}
 
-	// TODO CSRF protection
+	router.Use(csrfProtection)
 
 	v1 := router.Group(apiPrefix)
 	{
