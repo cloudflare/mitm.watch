@@ -21,6 +21,7 @@ type reporter struct {
 }
 
 var errTestNotFound = gin.H{"error": "test not found"}
+var errSubTestNotFound = gin.H{"error": "subtest not found"}
 
 func stubHandler(c *gin.Context) {
 	c.String(http.StatusNotImplemented, "not implemented yet")
@@ -40,12 +41,12 @@ func newReporter(db *sql.DB) *reporter {
 	v1 := router.Group(apiPrefix)
 	{
 		v1.POST("/tests", rep.createTest)
+		v1.PATCH("/tests/:testid", rep.updateTest)
 		v1.POST("/tests/:testid/subtests/:number/clientresult", rep.addClientResult)
 	}
 	authorized := v1.Group("/", authRequired)
 	{
 		authorized.GET("/tests", rep.listTests)
-		authorized.PATCH("/tests/:testid", stubHandler)
 		authorized.DELETE("/tests/:testid", rep.removeTest)
 		authorized.GET("/tests/:testid", rep.listTest)
 		authorized.GET("/tests/:testid/subtests", stubHandler)
@@ -89,6 +90,48 @@ func (*reporter) getSubtestNumber(c *gin.Context) (int, bool) {
 		return n, true
 	}
 	return 0, false
+}
+
+// checkTestEditAllowed checks whether a test exists and whether it is allowed
+// to be modified given the elapsed time. If edits are allowed, the internal
+// TestID is and true is returned.
+func (r *reporter) checkTestEditAllowed(c *gin.Context) (int, bool) {
+	testID, ok := r.getTestID(c)
+	if !ok {
+		return 0, false
+	}
+	var testIDKey int
+	var isPending, isEditable bool
+	err := r.db.QueryRow(`
+	SELECT
+		id,
+		is_pending,
+		now() - created_at < $2
+	FROM tests
+	WHERE
+		tests.test_id = $1
+	`, testID, r.config.MutableTestPeriodSecs).Scan(
+		&testIDKey,
+		&isPending,
+		&isEditable,
+	)
+	switch {
+	case err == sql.ErrNoRows:
+		c.JSON(http.StatusNotFound, errTestNotFound)
+		return 0, false
+	case err != nil:
+		r.dbError(c, err)
+		return 0, false
+	}
+
+	// if resource is locked, do not perform further changes.
+	if !isPending || !isEditable {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "test can no longer be modified",
+		})
+		return 0, false
+	}
+	return testIDKey, true
 }
 
 type createTestRequest struct {
@@ -157,6 +200,54 @@ func (r *reporter) createTest(c *gin.Context) {
 	}
 }
 
+type updateTestRequest struct {
+	UserComment *string `json:"user_comment"`
+	IsPending   *bool   `json:"is_pending"`
+}
+
+func (r *reporter) updateTest(c *gin.Context) {
+	testIDKey, ok := r.checkTestEditAllowed(c)
+	if !ok {
+		return
+	}
+
+	var json updateTestRequest
+	if err := c.BindJSON(&json); err == nil {
+		if json.UserComment == nil && (json.IsPending == nil || *json.IsPending == true) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "no changes requested",
+			})
+			return
+		}
+
+		// update fields if allowed
+		result, err := r.db.Exec(`
+		UPDATE tests
+		SET
+			user_comment = COALESCE($2, user_comment),
+			is_pending = COALESCE($3, is_pending)
+		WHERE id = $1 AND is_pending
+		`, testIDKey, json.UserComment, json.IsPending)
+		if err != nil {
+			r.dbError(c, err)
+			return
+		}
+		n, err := result.RowsAffected()
+		if err != nil {
+			r.dbError(c, err)
+			return
+		}
+		if n == 0 {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "test can no longer be modified",
+			})
+			return
+		}
+
+		c.Status(http.StatusNoContent)
+	}
+}
+
 type addClientResultRequest struct {
 	Number           int       `json:"number"`
 	BeginTime        time.Time `json:"begin_time"`
@@ -191,7 +282,7 @@ func addClientResultRequestToClientCapture(r *addClientResultRequest) (*ClientCa
 }
 
 func (r *reporter) addClientResult(c *gin.Context) {
-	testID, ok := r.getTestID(c)
+	testIDKey, ok := r.checkTestEditAllowed(c)
 	if !ok {
 		return
 	}
@@ -210,56 +301,28 @@ func (r *reporter) addClientResult(c *gin.Context) {
 			return
 		}
 
-		// check if (sub)test exists and whether it is allowed to be
-		// modified (pending)
-		var isPending, isEditable bool
+		// check for duplicate tests
+		var clientCaptureCount sql.NullInt64
 		err = r.db.QueryRow(`
 		SELECT
 			subtests.id,
-			is_pending,
-			now() - created_at < $3
-		FROM tests
-		JOIN subtests
-		ON tests.id = subtests.test_id
-		WHERE 
-			tests.test_id = $1 AND
+			client_captures.id
+		FROM subtests
+		LEFT JOIN client_captures
+		ON subtests.id = client_captures.subtest_id
+		WHERE
+			subtests.test_id = $1 AND
 			subtests.number = $2
-		`, testID, subtestNumber, r.config.MutableTestPeriodSecs).Scan(
-			&clientCapture.SubtestID,
-			&isPending,
-			&isEditable,
-		)
+		`, testIDKey, subtestNumber).Scan(&clientCapture.SubtestID, &clientCaptureCount)
 		switch {
 		case err == sql.ErrNoRows:
-			c.JSON(http.StatusNotFound, errTestNotFound)
+			// unknown subtest (or test was quickly deleted)
+			c.JSON(http.StatusNotFound, errSubTestNotFound)
 			return
 		case err != nil:
 			r.dbError(c, err)
 			return
-		}
-
-		// if resource is locked, do not perform further changes.
-		if !isPending || !isEditable {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": "test can no longer be modified",
-			})
-			return
-		}
-
-		// check for duplicate tests
-		var dummy int
-		err = r.db.QueryRow(`
-		SELECT 1
-		FROM client_captures
-		WHERE subtest_id = $1
-		`, clientCapture.SubtestID).Scan(&dummy)
-		switch {
-		case err == sql.ErrNoRows:
-			// ok, no duplicate.
-		case err != nil:
-			r.dbError(c, err)
-			return
-		default:
+		case clientCaptureCount.Valid:
 			c.JSON(http.StatusConflict, gin.H{
 				"error": "test submission was already received",
 			})
