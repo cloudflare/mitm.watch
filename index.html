@@ -1,134 +1,135 @@
 <!doctype html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>TLS 1.3 middleboxes test</title>
-<style>
-body:not(.booted) #results,
-body:not(.booted) .results-text,
-body #flash-message {
-    display: none;
-}
-body.booting.flash-please #flash-message {
-    display: block;
-}
-body.booting.flash-please #socketApi {
-    border: 2px solid red;
-}
-#results {
-    border-collapse: collapse;
-}
-#results th,
-#results td {
-    padding: 3px 5px;
-}
-#results td:nth-child(1) {
-    white-space: nowrap;
-}
-#results tr.status-ok td:nth-child(3) {
-    background: lightgreen;
-}
-#results tr.status-fail td:nth-child(3) {
-    background: pink;
-}
-#results tr.status-na td:nth-child(3) {
-    background: grey;
-}
-</style>
+  <meta charset="utf-8">
+  <title>TLS 1.3 middleboxes test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="css/styles.css" type="text/css">
+  <link rel="stylesheet" href="css/responsive.css" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600" rel="stylesheet">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">  
 </head>
-<body>
-<h1>TLS 1.3 middleboxes test</h1>
-<p>
-This page performs some tests to check for middlebox interference with TLS 1.3.
-For that it requires Adobe Flash and TCP port 843 to be open. If this is not the
-case, all tests will fail with <em>N/A</em>.
-</p>
 
-<h2 class="results-text">Results</h2>
-<table id="results">
-    <thead>
-    <tr>
-        <th>TLS Version</th>
-        <th>IP Version</th>
-        <th>Status</th>
-        <th>Remark</th>
-    </tr>
-    </thead>
-</table>
-<div id="flash-message">
-    Adobe Flash is currently required for its Socket API. Please activate the
-    Flash plugin below.
+<body>
+
+<div class="cf-gradient"></div>
+
+<div class="main-hover-box"> 
+  <div class="cf-gradient2"></div>
+  <div class="hover-box">
+    <div class="box-content">
+      <h1>TLS 1.3 middleboxes test</h1>
+
+      <p>
+      This page performs some tests to check for middlebox interference with TLS 1.3.
+      For that it requires Adobe Flash and TCP port 843 to be open. If this is not the
+      case, all tests will fail with <em>N/A</em>.
+      </p>
+
+      <h2 class="results-text">Results</h2>
+
+      <table id="results">
+        <thead>
+          <tr>
+            <th>TLS Version</th>
+            <th>IP Version</th>
+            <th>Status</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+    </table>
+
+      <div id="flash-message">
+        <div class="flash-warning">
+          <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+        </div>
+        <div class="flash-text">
+          Adobe Flash is currently required for its Socket API. Please activate the
+          Flash plugin below.
+        </div>
+        <div class="flash-text2">
+          Click and allow Flash to enable test
+        </div>
+      </div>
+
+      <div id="socketApi"></div>
+    </div>
+  </div>
 </div>
-<div id="socketApi"></div>
+
+<div class="footer">
+  <p class="footer-text">&copy;2017 Cloudflare</p>
+</div>
+
 <script src="//cdnjs.cloudflare.com/ajax/libs/swfobject/2.2/swfobject.js"></script>
 <script>
 // HACK: pretend to have a supported flash version
 if (window.chrome) {
-    swfobject.ua.pv = [100, 0, 0];
+  swfobject.ua.pv = [100, 0, 0];
 }
 // https://github.com/swfobject/swfobject/wiki/SWFObject-API
 // Use dimensions 100x100 instead of 0x0 or else Chrome won't prompt for
 // permission to use Flash
 swfobject.embedSWF("socketapi.swf", "socketApi", "100", "100", "13", false, {},
-                   {allowscriptaccess: "always"}, {}, null);
+                  {allowscriptaccess: "always"}, {}, null);
 
 var results = document.getElementById("results");
 var tlsVersions = {
-    0x300: "SSL 3.0",
-    0x303: "TLS 1.2",
-    0x304: "TLS 1.3 (draft -18)"
+  0x300: "SSL 3.0",
+  0x303: "TLS 1.2",
+  0x304: "TLS 1.3 (draft -18)"
 };
 var STATUS_OK = "OK", STATUS_NA = "N/A", STATUS_FAIL = "Fail";
 var detectStatus = function(exp) {
-    if (!exp.Failed) {
-        return STATUS_OK;
-    } else if (exp.Result === "connection timed out") {
-        return STATUS_NA;
-    } else {
-        return STATUS_FAIL;
-    }
+  if (!exp.Failed) {
+    return STATUS_OK;
+  } else if (exp.Result === "connection timed out") {
+    return STATUS_NA;
+  } else {
+    return STATUS_FAIL;
+  }
 };
 var updateStatus = function(status) {
-    if (status === "booting") {
-        // script has loaded, waiting for Flash
-        setTimeout(function() {
-            if (document.body.className === "booting") {
-                document.body.className += " flash-please";
-            }
-        }, 1000);
-    } else if (status === "booted") {
-    }
-    document.body.className = status;
+  if (status === "booting") {
+    // script has loaded, waiting for Flash
+    setTimeout(function() {
+      if (document.body.className === "booting") {
+          document.body.className += " flash-please";
+        }
+      }, 1000);
+  } else if (status === "booted") {
+  }
+  document.body.className = status;
 },
-    addExperiment = function(exp) {
-    if (results.tBodies.length === 0) {
-        results.createTBody();
-    }
-    var item = results.tBodies[0].insertRow();
-    item.insertCell().textContent = tlsVersions[exp.Version];
-    item.insertCell().textContent = exp.IPv6 ? "IPv6" : "IPv4";
-    item.insertCell().textContent = "Pending";
-    item.insertCell(); // Description
+  addExperiment = function(exp) {
+  if (results.tBodies.length === 0) {
+    results.createTBody();
+  }
+  var item = results.tBodies[0].insertRow();
+  item.insertCell().textContent = tlsVersions[exp.Version];
+  item.insertCell().textContent = exp.IPv6 ? "IPv6" : "IPv4";
+  item.insertCell().textContent = "Pending";
+  item.insertCell(); // Description
 },
-    updateExperiment = function(i, exp) {
-    var row = results.tBodies[0].rows[i];
-    var status = detectStatus(exp);
-    row.cells[2].textContent = status;
+  updateExperiment = function(i, exp) {
+  var row = results.tBodies[0].rows[i];
+  var status = detectStatus(exp);
+  row.cells[2].textContent = status;
 
-    var desc;
-    if (status == STATUS_FAIL) {
-        desc = exp.Result;
-        row.className = "status-fail";
-    } else if (status == STATUS_NA) {
-        desc = exp.Result;
-        row.className = "status-na";
-    } else if (exp.Expected) {
-        desc = "Matches expected: " + exp.Expected;
-        row.className = "status-ok";
-    } else {
-        desc = "";
-        row.className = "status-ok";
-    }
+  var desc;
+  if (status == STATUS_FAIL) {
+    desc = exp.Result;
+      row.className = "status-fail";
+  } else if (status == STATUS_NA) {
+    desc = exp.Result;
+      row.className = "status-na";
+  } else if (exp.Expected) {
+    desc = "Matches expected: " + exp.Expected;
+      row.className = "status-ok";
+  } else {
+    desc = "";
+      row.className = "status-ok";
+  }
     row.cells[3].textContent = desc;
 };
 </script>

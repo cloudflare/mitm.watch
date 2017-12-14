@@ -7,7 +7,9 @@ CADDY_GOPATH := $(CURDIR)/go
 # Build for another platform
 #CADDY_BUILD_ARGS := -goos=linux
 
-OBJS := public/index.html public/jssock.js public/socketapi.swf
+STATIC_FILES := index.html css/responsive.css css/styles.css
+OBJS := public/jssock.js public/socketapi.swf
+OBJS += $(addprefix public/,$(STATIC_FILES))
 DEV_OBJS := public/jssock.js.map public/jssock.js.map.gz public/main.go
 ifeq ($(DEV),1)
 OBJS += $(DEV_OBJS)
@@ -22,6 +24,9 @@ clean:
 
 public:
 	mkdir public
+
+public/css: | public
+	mkdir public/css
 
 ifeq ($(DEV),1)
 CONFFILE := $(srcdir)/config_dev.go
@@ -38,7 +43,7 @@ else
 	$(RM) public/main.go public/jssock.js.map public/jssock.js.map.gz
 endif
 
-public/index.html: $(srcdir)/index.html | public
+$(addprefix public/,$(STATIC_FILES)): public/% : $(srcdir)/% | public public/css
 	cp $< $@
 
 public/socketapi.swf: $(srcdir)/SocketAPI.hx | public
