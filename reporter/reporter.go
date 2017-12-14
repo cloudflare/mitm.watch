@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
-
-const apiPrefix = "/api/v1"
 
 type reporter struct {
 	*gin.Engine
@@ -49,9 +49,8 @@ func newReporter(db *sql.DB, config *Config) *reporter {
 	router := gin.Default()
 	rep := &reporter{router, db, config}
 
-	router.Use(csrfProtection)
-
-	v1 := router.Group(apiPrefix)
+	v1 := router.Group(config.ReporterApiPrefix)
+	v1.Use(csrfProtection)
 	{
 		v1.POST("/tests", rep.createTest)
 		v1.PATCH("/tests/:testid", rep.updateTest)
@@ -67,6 +66,22 @@ func newReporter(db *sql.DB, config *Config) *reporter {
 		authorized.GET("/tests/:testid/client.pcap", stubHandler)
 		authorized.GET("/tests/:testid/server.pcap", stubHandler)
 		authorized.GET("/tests/:testid/keylog.txt", stubHandler)
+	}
+
+	if config.ReporterStaticFilesRoot != "" {
+		prefixLen := len(config.ReporterStaticFilesRoot)
+		filepath.Walk(config.ReporterStaticFilesRoot,
+			func(path string, info os.FileInfo, err error) error {
+				if !info.IsDir() && err == nil {
+					// /myroot/index.html -> /index.html
+					webPath := path[prefixLen:]
+					if webPath == "/index.html" {
+						webPath = "/"
+					}
+					router.StaticFile(webPath, path)
+				}
+				return nil
+			})
 	}
 
 	return rep

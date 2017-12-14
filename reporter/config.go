@@ -27,6 +27,13 @@ type Config struct {
 	HostReporter   string // Reporter API
 	HostSuffixIPv4 string // IPv4 tests
 	HostSuffixIPv6 string // IPv6 tests
+
+	// Path prefix for the Reporter API.
+	ReporterApiPrefix string
+
+	// Local filesystem path to serve static files from. Leave empty to
+	// avoid serving files.
+	ReporterStaticFilesRoot string
 }
 
 var defaultConfig = Config{
@@ -47,4 +54,7 @@ var defaultConfig = Config{
 	HostReporter:   "l.ls-l.info",
 	HostSuffixIPv4: ".l4.ls-l.info",
 	HostSuffixIPv6: ".l6.ls-l.info",
+
+	ReporterApiPrefix:       "/api/v1",
+	ReporterStaticFilesRoot: "",
 }
