@@ -3,16 +3,24 @@ package main
 import (
 	"log"
 	"net"
-	"strings"
 	"time"
 )
 
+// RequestClaimer is given a hostname and should return whether the listener
+// should claim the request and if so, whether it should record the data.
+type RequestClaimer func(host string) (claimed bool, record bool)
+
 type listener struct {
 	net.Listener
+
+	sessionTimeout time.Duration
+	originAddress  string
+
+	ClaimRequest RequestClaimer
 }
 
-func newListener(ln net.Listener) *listener {
-	return &listener{ln}
+func newListener(ln net.Listener, sessionTimeout time.Duration, originAddress string, claimer RequestClaimer) *listener {
+	return &listener{ln, sessionTimeout, originAddress, claimer}
 }
 
 // a TLS record containing a fatal alert for unrecognized_name.
@@ -28,7 +36,7 @@ var tlsRecordUnrecognizedName = []byte{21, 3, 1, 0, 2, 2, 112}
 // proxied.
 func (ln *listener) handleConnection(c net.Conn) (net.Conn, bool) {
 	startTime := time.Now()
-	c.SetDeadline(startTime.Add(sessionTimeout))
+	c.SetDeadline(startTime.Add(ln.sessionTimeout))
 
 	remoteAddr := c.RemoteAddr().String()
 	wrappedConn := wrapConn(c)
@@ -40,15 +48,12 @@ func (ln *listener) handleConnection(c net.Conn) (net.Conn, bool) {
 	sni := parseClientHello(buffer)
 	log.Printf("%s - SNI: %v\n", remoteAddr, sni)
 
+	claimed, _ := ln.ClaimRequest(sni)
+	// TODO handle TCP logging
 	switch {
-	case sni == hostReporter:
-		// pass to HTTP handler, handle API requests.
+	case claimed:
 		return wrappedConn, false
-	case strings.HasSuffix(sni, hostSuffixIPv4) || strings.HasSuffix(sni, hostSuffixIPv6):
-		// pass to HTTP handler, handling a basic response.
-		// TODO configure logging here.
-		return wrappedConn, false
-	case originAddress == "":
+	case ln.originAddress == "":
 		log.Printf("%s - no upstream configured", remoteAddr)
 		c.Write(tlsRecordUnrecognizedName)
 		c.Close()
@@ -56,7 +61,8 @@ func (ln *listener) handleConnection(c net.Conn) (net.Conn, bool) {
 	default:
 		go func() {
 			defer c.Close()
-			if err := proxyConnection(wrappedConn, originAddress); err != nil {
+			// TODO consider disabling deadline?
+			if err := proxyConnection(wrappedConn, ln.originAddress); err != nil {
 				log.Printf("%s - error proxying connection: %v\n", remoteAddr, err)
 			}
 		}()

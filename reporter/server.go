@@ -8,43 +8,53 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	_ "github.com/lib/pq"
 )
 
-const (
-	connInfo = "sslmode=disable"
+func makeGetCertificate(config *Config) func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+	return func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		if strings.ToLower(info.ServerName) == config.HostReporter {
+			// TODO load trusted, user-facing certificate
+		}
 
-	// configuration used in listener.go
-	originAddress  = ""
-	sessionTimeout = 60 * time.Second
-
-	// Host name (suffix) for various purposes.
-	hostReporter   = "l.ls-l.info"   // Reporter API
-	hostSuffixIPv4 = ".l4.ls-l.info" // IPv4 tests
-	hostSuffixIPv6 = ".l6.ls-l.info" // IPv6 tests
-)
-
-func getCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-	// TODO select certificate based on host
-	cert, err := tls.LoadX509KeyPair("server.pem", "server.pem")
-	return &cert, err
+		// TODO load (possibly untrusted / self-signed) certificate
+		cert, err := tls.LoadX509KeyPair("server.pem", "server.pem")
+		return &cert, err
+	}
 }
 
 type hostHandler struct {
 	http.Handler
 	reporterHandler http.Handler
+	config          *Config
+}
+
+func makeIsOurHost(config *Config) RequestClaimer {
+	return func(host string) (bool, bool) {
+		host = strings.ToLower(host)
+		if host == config.HostReporter {
+			// pass to HTTP handler, handle API requests.
+			return true, false
+		}
+		if strings.HasSuffix(host, config.HostSuffixIPv4) || strings.HasSuffix(host, config.HostSuffixIPv6) {
+			// pass to HTTP handler, handling a basic response.
+			// Logging is tentatively enabled.
+			return true, true
+		}
+		return false, false
+	}
 }
 
 func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	config := h.config
 	host := strings.ToLower(parseHost(r.Host))
 
-	if host == hostReporter {
+	if host == config.HostReporter {
 		h.reporterHandler.ServeHTTP(w, r)
 		return
 	}
-	if strings.HasSuffix(host, hostSuffixIPv4) || strings.HasSuffix(host, hostSuffixIPv6) {
+	if strings.HasSuffix(host, config.HostSuffixIPv4) || strings.HasSuffix(host, config.HostSuffixIPv6) {
 		// magic response that should be checked for by the client
 		w.Write([]byte("Hello world!\n"))
 		return
@@ -54,7 +64,8 @@ func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	db, err := sql.Open("postgres", connInfo)
+	config := &defaultConfig
+	db, err := sql.Open("postgres", config.DatabaseConnInfo)
 	if err != nil {
 		panic(err)
 	}
@@ -67,14 +78,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	wl := newListener(l)
+	wl := newListener(l, config.SessionTimeout, config.OriginAddress, makeIsOurHost(config))
 
 	hostRouter := &hostHandler{
-		reporterHandler: newReporter(db),
+		reporterHandler: newReporter(db, config),
+		config:          config,
 	}
 
 	tlsConfig := &tls.Config{
-		GetCertificate: getCertificate,
+		GetCertificate: makeGetCertificate(config),
 	}
 
 	if keylogFilename := os.Getenv("SSLKEYLOGFILE"); keylogFilename != "" {

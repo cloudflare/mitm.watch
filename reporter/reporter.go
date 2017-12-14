@@ -17,7 +17,7 @@ const apiPrefix = "/api/v1"
 type reporter struct {
 	*gin.Engine
 	db     *sql.DB
-	config Config
+	config *Config
 }
 
 var errTestNotFound = gin.H{"error": "test not found"}
@@ -45,9 +45,9 @@ func authRequired(c *gin.Context) {
 	c.Next()
 }
 
-func newReporter(db *sql.DB) *reporter {
+func newReporter(db *sql.DB, config *Config) *reporter {
 	router := gin.Default()
-	rep := &reporter{router, db, defaultConfig}
+	rep := &reporter{router, db, config}
 
 	router.Use(csrfProtection)
 
