@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/tls"
-	"time"
 )
 
 type Config struct {
@@ -15,7 +14,7 @@ type Config struct {
 
 	// Timeout for reading the initial Client Hello message, and the timeout
 	// for processing requests.
-	SessionTimeout time.Duration
+	SessionTimeoutSecs int
 
 	// Database connection configuration.
 	DatabaseConnInfo string
@@ -42,8 +41,8 @@ var defaultConfig = Config{
 
 	DatabaseConnInfo: "sslmode=disable",
 
-	OriginAddress:  "",
-	SessionTimeout: 60 * time.Second,
+	OriginAddress:      "",
+	SessionTimeoutSecs: 60,
 
 	HostReporter:   "l.ls-l.info",
 	HostSuffixIPv4: ".l4.ls-l.info",

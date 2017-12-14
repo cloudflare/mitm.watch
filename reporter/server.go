@@ -3,11 +3,15 @@ package main
 import (
 	"crypto/tls"
 	"database/sql"
+	"encoding/json"
+	"errors"
+	"flag"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -63,8 +67,54 @@ func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "site is not configured", http.StatusNotFound)
 }
 
+var errExit = errors.New("exit normally")
+
+func parseArgs(config *Config) error {
+	var configFile, configFileOut string
+
+	flag.StringVar(&configFile, "config", "", "Configuration file (JSON)")
+	flag.StringVar(&configFileOut, "writeconfig", "", "Write updated configuration file and exit")
+
+	flag.Parse()
+
+	if configFile != "" {
+		file, err := os.Open(configFile)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		dec := json.NewDecoder(file)
+		if err = dec.Decode(config); err != nil {
+			return err
+		}
+	}
+
+	if configFileOut != "" {
+		file, err := os.OpenFile(configFileOut, os.O_CREATE|os.O_WRONLY, 0640)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		enc := json.NewEncoder(file)
+		enc.SetIndent("", "    ")
+		if err = enc.Encode(config); err != nil {
+			return err
+		}
+		return errExit
+	}
+
+	return nil
+}
+
 func main() {
 	config := &defaultConfig
+	if err := parseArgs(config); err != nil {
+		if err != errExit {
+			panic(err)
+		}
+		return
+	}
+
 	db, err := sql.Open("postgres", config.DatabaseConnInfo)
 	if err != nil {
 		panic(err)
@@ -78,7 +128,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	wl := newListener(l, config.SessionTimeout, config.OriginAddress, makeIsOurHost(config))
+	sessionTimeout := time.Duration(config.SessionTimeoutSecs) * time.Second
+	wl := newListener(l, sessionTimeout, config.OriginAddress, makeIsOurHost(config))
 
 	hostRouter := &hostHandler{
 		reporterHandler: newReporter(db, config),
