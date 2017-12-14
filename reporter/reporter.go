@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -71,17 +72,24 @@ func newReporter(db *sql.DB, config *Config) *reporter {
 	if config.ReporterStaticFilesRoot != "" {
 		prefixLen := len(config.ReporterStaticFilesRoot)
 		filepath.Walk(config.ReporterStaticFilesRoot,
-			func(path string, info os.FileInfo, err error) error {
+			func(fullPath string, info os.FileInfo, err error) error {
+				// do not accidentally serve hidden files.
+				if path.Base(fullPath)[0] == '.' {
+					if info.IsDir() {
+						return filepath.SkipDir
+					}
+					return nil
+				}
 				if !info.IsDir() && err == nil {
 					// /myroot/index.html -> /index.html
-					webPath := path[prefixLen:]
+					webPath := fullPath[prefixLen:]
 					if webPath == "/index.html" {
 						webPath = "/"
 					}
 					// TODO if this has a .gz file, try to
 					// serve that when the client supports
 					// content-encoding gzip.
-					router.StaticFile(webPath, path)
+					router.StaticFile(webPath, fullPath)
 				}
 				return nil
 			})
