@@ -78,6 +78,9 @@ func newReporter(db *sql.DB, config *Config) *reporter {
 					if webPath == "/index.html" {
 						webPath = "/"
 					}
+					// TODO if this has a .gz file, try to
+					// serve that when the client supports
+					// content-encoding gzip.
 					router.StaticFile(webPath, path)
 				}
 				return nil
