@@ -2,6 +2,9 @@ GOBIN := go
 FILES_CMD := git ls-files ':!*_test.go' ':!*/*' ':*.go'
 FILES := $(shell $(FILES_CMD))
 
+reporter: $(FILES)
+	$(GOBIN) build $(FILES)
+
 run:
 	$(GOBIN) run $(FILES) $(ARGS)
 

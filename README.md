@@ -26,17 +26,17 @@ To enable TLS 1.3 client and server support, tls-tris master should work:
     PATH="${GOROOT/GOROOT/go}/bin:$GOPATH/bin:$PATH"
     go get github.com/gopherjs/gopherjs
 
-During development of the frontend:
+During development, run these two commands separately to build the frontend and
+to start the backend that provides tests:
 
-    ln -s ../.. "$GOPATH/src/jssock"
-    gopherjs serve --http localhost:8080 -v
+    make -C server watch DEV=1
+    make -C reporter watch
 
-Otherwise one could create a minified config (see `Caddyfile`):
+ALternatively, you can build once:
 
-    cd server
-    make DEV=1          # make frontend
-    make caddy          # make server with TLS 1.3 support
-    ./caddy -http-port 8080 -https-port 4433 -log stdout
+    make -C server DEV=1        # make frontend
+    make -C reporter            # make backend with TLS 1.3 support
+    cd reporter && ./reporter
 
 To allow socket connections according to the the config file:
 
@@ -44,9 +44,8 @@ To allow socket connections according to the the config file:
     make caddy
     sudo ./caddy -type flashsocketpolicy -conf Caddyfile.flashsocketpolicy
 
-To test, visit http://localhost:8080/jssock/ and open the Console tab in the
-Developer Tools (tested with Chrome). Grant permission to use Flash and watch
-the logs.
+To test, visit https://localhost:4433/ and open the Console tab in the Developer
+Tools (tested with Chrome). Grant permission to use Flash and watch the logs.
 
 ## Bugs
 Known limitations and issues:

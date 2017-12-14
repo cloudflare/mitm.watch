@@ -48,7 +48,7 @@ endif
 
 .PHONY: watch
 watch:
-	while :; do $(MAKE); kqwait $(CLIENT_FILES_SRC) $(CONFFILE); sleep .1; done
+	while :; do $(MAKE) DEV=$(DEV); kqwait $(CLIENT_FILES_SRC) $(CONFFILE); sleep .1; done
 
 $(addprefix public/,$(STATIC_FILES)): public/% : $(srcdir)/% | public public/css
 	cp $< $@

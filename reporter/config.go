@@ -56,5 +56,5 @@ var defaultConfig = Config{
 	HostSuffixIPv6: ".l6.ls-l.info",
 
 	ReporterApiPrefix:       "/api/v1",
-	ReporterStaticFilesRoot: "",
+	ReporterStaticFilesRoot: "../server/public",
 }
