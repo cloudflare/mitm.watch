@@ -28,10 +28,23 @@ func makeGetCertificate(config *Config) func(*tls.ClientHelloInfo) (*tls.Certifi
 	}
 }
 
+// Sets the maximum version for the test server target to TLS 1.3.
+func (h *hostHandler) getConfigForClient(info *tls.ClientHelloInfo) (*tls.Config, error) {
+	if isTestHost(info.ServerName, h.config) {
+		return h.tls13Config, nil
+	}
+	return nil, nil
+}
+
 type hostHandler struct {
 	http.Handler
 	reporterHandler http.Handler
 	config          *Config
+	tls13Config     *tls.Config
+}
+
+func isTestHost(host string, config *Config) bool {
+	return strings.HasSuffix(host, config.HostSuffixIPv4) || strings.HasSuffix(host, config.HostSuffixIPv6)
 }
 
 func makeIsOurHost(config *Config) RequestClaimer {
@@ -41,7 +54,7 @@ func makeIsOurHost(config *Config) RequestClaimer {
 			// pass to HTTP handler, handle API requests.
 			return true, false
 		}
-		if strings.HasSuffix(host, config.HostSuffixIPv4) || strings.HasSuffix(host, config.HostSuffixIPv6) {
+		if isTestHost(host, config) {
 			// pass to HTTP handler, handling a basic response.
 			// Logging is tentatively enabled.
 			return true, true
@@ -58,7 +71,7 @@ func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.reporterHandler.ServeHTTP(w, r)
 		return
 	}
-	if strings.HasSuffix(host, config.HostSuffixIPv4) || strings.HasSuffix(host, config.HostSuffixIPv6) {
+	if isTestHost(host, config) {
 		// magic response that should be checked for by the client
 		w.Write([]byte("Hello world!\n"))
 		return
@@ -137,7 +150,8 @@ func main() {
 	}
 
 	tlsConfig := &tls.Config{
-		GetCertificate: makeGetCertificate(config),
+		GetCertificate:     makeGetCertificate(config),
+		GetConfigForClient: hostRouter.getConfigForClient,
 	}
 
 	if keylogFilename := os.Getenv("SSLKEYLOGFILE"); keylogFilename != "" {
@@ -150,6 +164,9 @@ func main() {
 			tlsConfig.KeyLogWriter = kw
 		}
 	}
+
+	hostRouter.tls13Config = tlsConfig.Clone()
+	hostRouter.tls13Config.MaxVersion = tls.VersionTLS13
 
 	server := &http.Server{
 		Handler:   hostRouter,
