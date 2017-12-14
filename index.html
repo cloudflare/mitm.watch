@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/styles.css" type="text/css">
   <link rel="stylesheet" href="css/responsive.css" type="text/css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600" rel="stylesheet">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">  
 </head>
@@ -25,6 +26,25 @@
       For that it requires Adobe Flash and TCP port 843 to be open. If this is not the
       case, all tests will fail with <em>N/A</em>.
       </p>
+
+      <p><input id="checkBox" class="confirm-checkbox"type="checkbox">Enable additional MITM detection, this requires the server to record test results that could be sent to Cloudflare for anlytical purposes. <button class="learnmore" onclick="extratext()">Try it</button></p>
+
+      <div id="hidden-text" class="hidden">
+        <p>The default test information that we collect: <br />
+        - client IP address <br />
+        - the result (pass/fail) of a connection 
+        (to know which networks/ISPs are affected by the problem) <br />
+        - the synthetic TCP payloads and session keys 
+        (these are used to investigate the cause for failing connections)</p>
+
+        <p>
+          The optional of information that we collect:  <br />
+          - user agent (web browser) <br />
+          - flash version
+        </p>
+      </div>
+
+      <button type="button" class="btn-start"onclick="alert('Make this run the test')">Start The Test</button>
 
       <h2 class="results-text">Results</h2>
 
@@ -133,6 +153,14 @@ var updateStatus = function(status) {
     row.cells[3].textContent = desc;
 };
 </script>
+
+<script>
+function extratext() {
+   var element = document.getElementById("hidden-text");
+   element.classList.toggle("hidden");
+}
+</script>
+
 <script src="jssock.js"></script>
 </body>
 </html>
