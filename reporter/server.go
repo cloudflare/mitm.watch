@@ -136,8 +136,7 @@ func main() {
 		panic(err)
 	}
 
-	address := ":4433"
-	l, err := net.Listen("tcp", address)
+	l, err := net.Listen("tcp", config.ListenAddress)
 	if err != nil {
 		panic(err)
 	}

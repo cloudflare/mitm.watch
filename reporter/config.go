@@ -19,6 +19,9 @@ type Config struct {
 	// Database connection configuration.
 	DatabaseConnInfo string
 
+	// Host and port to listen on
+	ListenAddress string
+
 	// Address to proxy connections to in case the host is not handled by
 	// us. An empty value prevents proxying.
 	OriginAddress string
@@ -47,6 +50,7 @@ var defaultConfig = Config{
 	},
 
 	DatabaseConnInfo: "sslmode=disable",
+	ListenAddress:    ":4433",
 
 	OriginAddress:      "",
 	SessionTimeoutSecs: 60,
