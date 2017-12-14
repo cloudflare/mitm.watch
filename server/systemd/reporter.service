@@ -1,6 +1,6 @@
 [Unit]
 Description=Reporter web server
-After=network-online.target
+After=network-online.target postgresql.service
 
 [Service]
 User=caddy
