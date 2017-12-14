@@ -2,5 +2,6 @@
 go
 server/public/
 caddy
+reporter/reporter
 socketapi.swf
 .DS_Store

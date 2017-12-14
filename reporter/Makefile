@@ -3,7 +3,7 @@ FILES_CMD := git ls-files ':!*_test.go' ':!*/*' ':*.go'
 FILES := $(shell $(FILES_CMD))
 
 reporter: $(FILES)
-	$(GOBIN) build $(FILES)
+	$(GOBIN) build -o $@ $(FILES)
 
 run:
 	$(GOBIN) run $(FILES) $(ARGS)
