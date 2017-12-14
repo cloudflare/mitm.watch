@@ -1,6 +1,6 @@
 # TLS 1.3 in your web browser
 This project is an experiment to run TLS 1.3 in a webbrowser with the intention
-to check what kind of middle boxes ruin the game.
+to check what kind of middleboxes ruin the game.
 
 ## Prototype
 The [tris](https://github.com/cloudflare/tls-tris) library provides TLS 1.3
@@ -19,8 +19,7 @@ API](http://help.adobe.com/en_US/FlashPlatform/reference/actionscript/3/flash/ne
 
 ## Building
 To build the Flash socket API file, [Haxe](https://haxe.org/) must be installed.
-To enable TLS 1.3 client and server support, use the pwu/client branch of
-tls-tris:
+To enable TLS 1.3 client and server support, tls-tris master should work:
 
     export GOROOT=$(~/repos/tls-tris/_dev/go.sh env GOROOT)
     export GOPATH=$PWD/go
@@ -52,9 +51,11 @@ the logs.
 ## Bugs
 Known limitations and issues:
 - Requires click-to-play (user interaction).
-- Flash is being killed, consider alternative methods. Possible options include
-  [chrome.socket.tcp](https://developer.chrome.com/apps/sockets_tcp), provided
-  via a browser extension.
+- Flash is being killed, consider alternative methods. Non-options: Chrome
+  socket API is limited to apps (which will be
+  [removed](https://blog.chromium.org/2016/08/from-chrome-apps-to-web.html) in
+  early 2018), FirefoxOS is also gone and the W3C TCP and UDP socket spec is
+  also [abandoned](https://www.w3.org/2012/sysapps/).
 - Certificate validation is missing.
 - There are a lot of TODOs.
-- Split socket API from main.go into a separate go file
+- Split socket API from main.go into a separate go package (jssock).
