@@ -7,10 +7,12 @@ CADDY_GOPATH := $(CURDIR)/go
 # Build for another platform
 #CADDY_BUILD_ARGS := -goos=linux
 
+CLIENT_FILES := main.go models_client.go reporter_client.go
 STATIC_FILES := index.html css/responsive.css css/styles.css
 OBJS := public/jssock.js public/socketapi.swf
 OBJS += $(addprefix public/,$(STATIC_FILES))
-DEV_OBJS := public/jssock.js.map public/jssock.js.map.gz public/main.go
+DEV_OBJS := public/jssock.js.map public/jssock.js.map.gz
+DEV_OBJS += $(addprefix public/,$(CLIENT_FILES))
 ifeq ($(DEV),1)
 OBJS += $(DEV_OBJS)
 endif
@@ -34,23 +36,27 @@ else
 CONFFILE := $(srcdir)/config_prod.go
 endif
 
-public/jssock.js public/jssock.js.map: $(srcdir)/main.go $(CONFFILE) | public
+CLIENT_FILES_SRC := $(addprefix $(srcdir)/,$(CLIENT_FILES))
+public/jssock.js public/jssock.js.map: $(CLIENT_FILES_SRC) $(CONFFILE) | public
 ifeq ($(DEV),1)
 	$(GOPHERJS) build -o public/jssock.js $^
 else
 	$(GOPHERJS) build -o public/jssock.js $^ -m --tags prod
 	sed -e '/sourceMappingURL=/d' -i '' public/jssock.js
-	$(RM) public/main.go public/jssock.js.map public/jssock.js.map.gz
+	$(RM) $(DEV_OBJS)
 endif
 
+.PHONY: watch
+watch:
+	while :; do $(MAKE); kqwait $(CLIENT_FILES_SRC) $(CONFFILE); sleep .1; done
+
 $(addprefix public/,$(STATIC_FILES)): public/% : $(srcdir)/% | public public/css
+	cp $< $@
+$(addprefix public/,$(CLIENT_FILES)): public/% : $(srcdir)/% | public
 	cp $< $@
 
 public/socketapi.swf: $(srcdir)/SocketAPI.hx | public
 	haxe -main SocketAPI -swf $@ -swf-version 13 -cp $(srcdir)
-
-public/main.go: $(srcdir)/main.go | public
-	cp $< $@
 
 %.gz: %
 	gzip -9kf $<

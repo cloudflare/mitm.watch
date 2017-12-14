@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -26,12 +25,11 @@ var (
 
 // Experiments configuration
 type Experiment struct {
-	Domain   string
-	IPv6     bool
-	Version  uint16
-	Result   string
-	Failed   bool
-	Expected string // expected error message
+	Domain  string
+	IPv6    bool
+	Version uint16
+	Result  string
+	Failed  bool
 }
 
 type keyLogPrinter struct{}
@@ -65,56 +63,84 @@ func updateExperiment(i int, exp *Experiment) {
 	}
 }
 
-func main() {
-	updateStatus("booting")
-	once.Do(initSocketApi)
-	updateStatus("booted")
+func specToDomain(testId string, spec SubtestSpec) string {
+	domain := ipv4Domain
+	if spec.IsIPv6 {
+		domain = ipv6Domain
+	}
+	return fmt.Sprintf("%s-%d.%s", testId, spec.Number, domain)
+}
 
-	experiments := []*Experiment{
-		{Domain: ipv4Domain, Version: tls.VersionTLS12},
-		{Domain: ipv4Domain, Version: tls.VersionTLS13},
-		{Domain: ipv6Domain, IPv6: true, Version: tls.VersionTLS12},
-		{Domain: ipv6Domain, IPv6: true, Version: tls.VersionTLS13},
-		// should fail as SSL 3.0 is disabled
-		{Domain: ipv4Domain, Version: tls.VersionSSL30, Expected: "remote error: tls: protocol version not supported"},
-		// should fail as the host does not exist
-		{Domain: noDomain, Version: tls.VersionTLS12, Expected: "connection timed out"},
+func gatherTests() (string, []SubtestSpec, error) {
+	testRequest := createTestRequest{
+		// TODO populate client version
+		ClientVersion: "TEST",
+		FlashVersion:  "",
+		UserAgent:     js.Global.Get("navigator").Get("userAgent").String(),
 	}
-	// randomize addresses (for easier tracking purposes)
-	for _, exp := range experiments {
-		var randBytes [16]byte
-		_, err := rand.Read(randBytes[:])
-		if err != nil {
-			panic("random failed")
-		}
-		exp.Domain = fmt.Sprintf("%x.%s", randBytes, exp.Domain)
-		// display in UI
-		addExperiment(exp)
-	}
+	return CreateTest(testRequest)
+}
+
+func runTests(testId string, specs []SubtestSpec) {
+	experiments := make([]Experiment, len(specs))
 	var wg sync.WaitGroup
-	for i, exp := range experiments {
+	for i, spec := range specs {
 		i := i
-		exp := exp
+		spec := spec
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			response, err := tryTLS(exp.Domain, exp.Version)
+			domain := specToDomain(testId, spec)
+			response, err := tryTLS(domain, spec.MaxTLSVersion)
+
+			// TODO rewrite this, remove Experiment struct.
+			// Currently only here to avoid changing frontend
+			exp := &experiments[i]
+			exp.Domain = domain
+			exp.IPv6 = spec.IsIPv6
+			exp.Version = spec.MaxTLSVersion
 			if err != nil {
 				exp.Result = err.Error()
-				exp.Failed = exp.Expected != err.Error()
+				exp.Failed = true
 			} else {
 				exp.Result = response
-				exp.Failed = exp.Expected != ""
+				exp.Failed = false
 			}
 			// display in UI
 			updateExperiment(i, exp)
 		}()
 	}
 	wg.Wait()
+
 	for _, exp := range experiments {
 		// Calling console.log for now because it hides private fields.
 		js.Global.Get("console").Call("log", exp)
 	}
+}
+
+func main() {
+	updateStatus("booting")
+	once.Do(initSocketApi)
+	updateStatus("booted")
+
+	// TODO do this when starting tests va a button
+	testId, specs, err := gatherTests()
+	if err != nil {
+		// TODO this could be a network error, show message to user
+		panic(err)
+	}
+
+	// display tests in UI
+	for _, spec := range specs {
+		exp := &Experiment{
+			Domain:  specToDomain(testId, spec),
+			IPv6:    spec.IsIPv6,
+			Version: spec.MaxTLSVersion,
+		}
+		addExperiment(exp)
+	}
+
+	runTests(testId, specs)
 }
 
 func tryTLS(domain string, version uint16) (string, error) {
