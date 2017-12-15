@@ -91,7 +91,7 @@ body {
 .main-hover-box {
   border: 1px solid #DDDDDD;
   box-shadow: 1px 2px 8px rgba(0, 0, 0, .2);
-  width: 75%;
+  width: 60%;
   margin: -100px auto 0 auto;
   z-index: 100;
 }
@@ -125,7 +125,9 @@ p {
 }
 
 .learnmore {
-
+  color: #408BC8;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .btn-start {
@@ -135,7 +137,6 @@ p {
   display: inline-block;
   font-weight: 400;
   line-height: 1.25;
-  text-align: center;
   white-space: nowrap;
   vertical-align: middle;
   -webkit-user-select: none;
@@ -219,4 +220,39 @@ th {
 td {
   padding: 8px 10px;
 }
+
+
+/* Extra Small Devices, Phones */ 
+@media only screen and (min-width : 480px) {
+  .main-hover-box {
+    width: 90%;
+  }
+}
+
+/* Small Devices, Tablets */
+@media only screen and (min-width : 768px) {
+  .main-hover-box {
+    width: 70%;
+  }
+}
+
+/* Medium Devices, Desktops */
+@media only screen and (min-width : 992px) {
+  .main-hover-box {
+    width: 60%;
+  }
+}
+
+/* Large Devices, Wide Screens */
+@media only screen and (min-width : 1200px) {
+  .main-hover-box {
+    width: 60%;
+  }
+}
+
+
+
+
+  
+
 
