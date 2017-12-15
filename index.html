@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/styles.css" type="text/css">
   <link rel="stylesheet" href="css/responsive.css" type="text/css">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600" rel="stylesheet">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">  
 </head>
@@ -28,24 +27,62 @@
         case, all tests will fail with <em>N/A</em>.
         </p>
 
-        <p><input id="checkBox" class="confirm-checkbox"type="checkbox">Enable additional MITM detection, this requires the server to record test results that could be sent to Cloudflare for anlytical purposes. <span class="learnmore" onclick="extratext()">Learn More</span></p>
+        <p>
+        <label>
+        <input id="verbose" class="confirm-checkbox" type="checkbox" checked>
+        Enable additional MITM detection, this requires the server to record
+        test results.
+        </label>
+        <span class="learnmore" onclick="extratext()">Learn More</span></p>
 
         <div id="hidden-text" class="hidden">
-          <h3>The default test information that we collect:</h3>
-          <p>- Client IP Address <br />
-          - The result (pass/fail) of a connection 
-          (to know which networks/ISPs are affected by the problem) <br />
-          - The synthetic TCP payloads and session keys 
-          (these are used to investigate the cause for failing connections)</p>
-
-          
-          <h3>The optional of information that we collect:</h3>
-          <p>  - User Agent (web browser) <br />
-            - Flash Version
+          <p>
+            The purpose of this tool is to gather insight in potential failure
+            modes of TLS 1.3. We aim for full transparency in what we do, data
+            will only be collected once the test starts.
           </p>
+
+          <h3>Information that we collect</h3>
+          <ul>
+            <li>IP address: used to learn what (mobile) networks or ISPs are
+              problematic.
+            <li>Result (pass/fail): whether a connection attempt succeeded and
+              whether the response matches the expectation.
+            <li>Contents of the simulated connection (TCP payload and session
+              keys): this should normally have an exact match with the server
+              view. A mismatch indicates potential issues.
+            <li>User Agent (web browser version): allows tests to be discarded
+              later in case we discover incompatibilities between a test and a
+              browser.
+            <li>If you choose to disable additional MITM detection, the above
+              will not be collected and finer analysis is not possible. As a
+              result the test report will be less informative.
+          </ul>
+
+          <h3>Who are we</h3>
+          <p>
+            This opensource project is built by <a
+            href="https://www.cloudflare.com/">Cloudflare</a>. We help building
+            a better (more secure) Internet and are involved in the
+            development and deployment of TLS 1.3 at scale.
+            To see the code or report issues, see this <a
+            href="https://github.com/cloudflare/mitm.watch">Github</a>
+            repository.
+          </p>
+
+          <h3>What we are going to do with the data</h3>
+          <ul>
+            <li>Aggregate results, providing a summary for the public.
+            <li>Help to make informed decisions in the development of the TLS
+              1.3 specification.
+            <li>Analyze potential middlebox interference.
+            <li>The raw data will be treated as confidential, but we may share
+              (a subset of) it with other researchers for scientific purposes.
+              This includes browser vendors who run similar tests.
+          </ul>
         </div>
 
-        <button type="button" class="btn-start"onclick="alert('Make this run the test')">Start The Test</button>
+        <button type="button" class="btn-start" id="action-start">Start The Test</button>
 
         <h2 class="results-text">Results</h2>
 
