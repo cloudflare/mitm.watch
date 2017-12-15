@@ -32,6 +32,12 @@
     text-align: center;
     margin-right: 0;
   }
+  .btn-start {
+    width: 90%;
+  }
+  .content {
+    height: calc(100vh - 90px);
+  }
 }
 
 @media screen and (max-width: 768px) { /* iPad portrait */
@@ -40,7 +46,17 @@
   }
 }
 
-@media screen and (max-width: 1024px) { /* iPad landscape */
+/* Medium Devices, Desktops */
+@media only screen and (min-width : 992px) {
+  .main-hover-box {
+    width: 60%;
+  }
+}
 
+/* Large Devices, Wide Screens */
+@media only screen and (min-width : 1200px) {
+  .main-hover-box {
+    width: 60%;
+  }
 }
 

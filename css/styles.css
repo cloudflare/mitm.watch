@@ -91,7 +91,7 @@ body {
 .main-hover-box {
   border: 1px solid #DDDDDD;
   box-shadow: 1px 2px 8px rgba(0, 0, 0, .2);
-  width: 60%;
+  width: 75%;
   margin: -100px auto 0 auto;
   z-index: 100;
 }
@@ -148,7 +148,7 @@ p {
   user-select: none;
   border: 1px solid transparent;
   padding: 0.75rem 3rem;
-  width: 45%;
+  min-width: 45%;
   margin: 25px auto;
   font-size: 1rem;
   border-radius: .25rem;
@@ -168,14 +168,17 @@ p {
   box-shadow: 0 0 0 2px rgba(2,117,216,.5);
 }
 
+.content {
+  margin-bottom: 20px;
+  min-height: calc(90vh - 70px);
+}
+
 .footer {
-/*  position: absolute;
-  bottom: 0;*/
+  height: 50px;
   background-color: #FFFFFF;
   height: 75px;
   position: absolute;
   left: 0; right: 0;
-  margin-top: 15px;
 }
 
 .footer-text {
@@ -226,38 +229,4 @@ td {
   padding: 8px 10px;
 }
 
-
-/* Extra Small Devices, Phones */ 
-@media only screen and (min-width : 480px) {
-  .main-hover-box {
-    width: 90%;
-  }
-}
-
-/* Small Devices, Tablets */
-@media only screen and (min-width : 768px) {
-  .main-hover-box {
-    width: 70%;
-  }
-}
-
-/* Medium Devices, Desktops */
-@media only screen and (min-width : 992px) {
-  .main-hover-box {
-    width: 60%;
-  }
-}
-
-/* Large Devices, Wide Screens */
-@media only screen and (min-width : 1200px) {
-  .main-hover-box {
-    width: 60%;
-  }
-}
-
-
-
-
   
-
-
