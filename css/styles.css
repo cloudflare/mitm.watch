@@ -122,6 +122,9 @@ p {
 }
 
 #hidden-text {
+  padding: 5px 20px;
+  border: 1px solid #ddd;
+  background-color: #f2f2f2;
 }
 
 .learnmore {
@@ -134,7 +137,7 @@ p {
   color: #fff;
   background-color: #408BC8;
   border-color: #0275d8;
-  display: inline-block;
+  display: block;
   font-weight: 400;
   line-height: 1.25;
   white-space: nowrap;
@@ -144,7 +147,9 @@ p {
   -ms-user-select: none;
   user-select: none;
   border: 1px solid transparent;
-  padding: .5rem 3rem;
+  padding: 0.75rem 3rem;
+  width: 45%;
+  margin: 25px auto;
   font-size: 1rem;
   border-radius: .25rem;
   -webkit-transition: all .2s ease-in-out;
@@ -164,8 +169,8 @@ p {
 }
 
 .footer {
-  position: absolute;
-  bottom: 0;
+/*  position: absolute;
+  bottom: 0;*/
   background-color: #FFFFFF;
   height: 75px;
   position: absolute;
