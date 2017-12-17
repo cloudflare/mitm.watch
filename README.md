@@ -26,6 +26,13 @@ To enable TLS 1.3 client and server support, tls-tris master should work:
     PATH="${GOROOT/GOROOT/go}/bin:$GOPATH/bin:$PATH"
     go get github.com/gopherjs/gopherjs
 
+The test target service requires a dummy certificate. If you have no valid
+certificate for the reporter service, you can create it now as well with the
+`-create-reporter=true` option. To do this:
+
+    cd reporter
+    go run generate_cert.go config.go models.go
+
 During development, run these two commands separately to build the frontend and
 to start the backend that provides tests:
 
@@ -46,6 +53,25 @@ To allow socket connections according to the the config file:
 
 To test, visit https://localhost:4433/ and open the Console tab in the Developer
 Tools (tested with Chrome). Grant permission to use Flash and watch the logs.
+
+## Configuration
+The client configuration is located in `config_dev.go` (when built with `DEV=1`)
+or `config_prod.go`. It contains the addresses for the reporter API.
+
+The reporter API provides test cases and assists in execution of tests. Its
+default configuration is in `reporter/config.go` but it can be overridden using
+a configuration file. Missing keys will remain unchanged. Example:
+
+    cd reporter
+    ./reporter -writeconfig config_dev.json     # write default config and exit
+    ./reporter -config config_dev.json          # run with config
+
+Example where the configuration file is updated with default values:
+
+    echo '{"ListenAddress": ":443"}' > config_prod.json
+    ./reporter -config config_prod.json -writeconfig config_prod.json
+
+Note that the `-config` option is also valid for the `generate_cert.go` program.
 
 ## Bugs
 Known limitations and issues:

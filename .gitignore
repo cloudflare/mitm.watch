@@ -6,3 +6,5 @@ reporter/reporter
 socketapi.swf
 .DS_Store
 *.pem
+*.key
+*.crt

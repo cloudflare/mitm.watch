@@ -73,6 +73,11 @@ var defaultConfig = Config{
 
 	ReporterApiPrefix:       "/api/v1",
 	ReporterStaticFilesRoot: "../server/public",
+
+	ReporterCertificate: "reporter.crt",
+	ReporterPrivateKey:  "reporter.key",
+	DummyCertificate:    "dummy.crt",
+	DummyPrivateKey:     "dummy.key",
 }
 
 // (Partially) updates the configuration from the given file.
