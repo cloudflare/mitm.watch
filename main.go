@@ -163,7 +163,8 @@ func tryTLS(domain string, version uint16) (string, error) {
 	}
 
 	tls_conn := tls.Client(conn, tls_config)
-	n, err := tls_conn.Write([]byte("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n"))
+	request := fmt.Sprintf("GET / HTTP/1.1\r\nHost: %s\r\n\r\n", domain)
+	n, err := tls_conn.Write([]byte(request))
 	if err != nil {
 		return "", err
 	}
