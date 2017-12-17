@@ -42,12 +42,14 @@ ifeq ($(DEV),1)
 	$(GOPHERJS) build -o public/jssock.js $^
 else
 	$(GOPHERJS) build -o public/jssock.js $^ -m --tags prod
-	sed -e '/sourceMappingURL=/d' -i '' public/jssock.js
+	sed -e '/sourceMappingURL=/d' -i.bak public/jssock.js
+	$(RM) public/jssock.js.bak
 	$(RM) $(DEV_OBJS)
 endif
 
 .PHONY: watch
 watch:
+	type kqwait >/dev/null 2>&1 || kqwait(){ inotifywait -q -e delete_self,close_write "$$@"; }; \
 	while :; do $(MAKE) DEV=$(DEV); kqwait $(CLIENT_FILES_SRC) $(CONFFILE); sleep .1; done
 
 $(addprefix public/,$(STATIC_FILES)): public/% : $(srcdir)/% | public public/css
@@ -69,9 +71,10 @@ $(caddydir):
 	# Expect line to insert out import after; then insert if missing
 	grep -q $(magic) $(caddydir)/caddymain/run.go
 	grep -q $(insert) $(caddydir)/caddymain/run.go || \
-		sed -e "$$(printf '/%s/a\\\n%s' $(magic) $(insert))" -i '' $(caddydir)/caddymain/run.go
+		sed -e "$$(printf '/%s/a\\\n%s' $(magic) $(insert))" -i.bak $(caddydir)/caddymain/run.go
 	# Allow TLS 1.3 to be selected.
-	sed -e '/tls1\.2/{n;s/^}/"tls1.3": tls.VersionTLS13,}/;}' -i '' $(caddydir)/../caddytls/config.go
+	sed -e '/tls1\.2/{n;s/^}/"tls1.3": tls.VersionTLS13,}/;}' -i.bak $(caddydir)/../caddytls/config.go
+	$(RM) $(caddydir)/caddymain/run.go.bak $(caddydir)/../caddytls/config.go.bak
 ifeq ($(CADDY_FORCE_REBUILD),1)
 .PHONY: $(caddydir)
 endif

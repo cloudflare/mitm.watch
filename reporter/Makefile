@@ -9,7 +9,8 @@ run:
 	$(GOBIN) run $(FILES) $(ARGS)
 
 watch:
-	@while :; do \
+	@type kqwait >/dev/null 2>&1 || kqwait(){ inotifywait -q -e delete_self,close_write "$$@"; }; \
+	while :; do \
 		files=$$($(FILES_CMD) | tr '\n' ' '); \
 		echo "$$(date -R) - go run $$files"; \
 		$(GOBIN) run $$files $(ARGS) & pid=$$!; \
