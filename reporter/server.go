@@ -16,16 +16,12 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func makeGetCertificate(config *Config) func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-	return func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		if strings.ToLower(info.ServerName) == config.HostReporter {
-			// TODO load trusted, user-facing certificate
-		}
-
-		// TODO load (possibly untrusted / self-signed) certificate
-		cert, err := tls.LoadX509KeyPair("server.pem", "server.pem")
-		return &cert, err
+func (h *hostHandler) getCertificate(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	if strings.ToLower(info.ServerName) == h.config.HostReporter {
+		return h.reporterCert.Load()
 	}
+
+	return h.dummyCert.Load()
 }
 
 // Sets the maximum version for the test server target to TLS 1.3.
@@ -41,6 +37,8 @@ type hostHandler struct {
 	reporterHandler http.Handler
 	config          *Config
 	tls13Config     *tls.Config
+	reporterCert    *CertificateLoader
+	dummyCert       *CertificateLoader
 }
 
 func isTestHost(host string, config *Config) bool {
@@ -91,13 +89,7 @@ func parseArgs(config *Config) error {
 	flag.Parse()
 
 	if configFile != "" {
-		file, err := os.Open(configFile)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		dec := json.NewDecoder(file)
-		if err = dec.Decode(config); err != nil {
+		if err := config.Update(configFile); err != nil {
 			return err
 		}
 	}
@@ -128,6 +120,15 @@ func main() {
 		return
 	}
 
+	reporterCert := NewCertificateLoader(config.ReporterCertificate, config.ReporterPrivateKey)
+	if _, err := reporterCert.Load(); err != nil {
+		log.Fatalf("Failed to load reporter certificate: %s", err)
+	}
+	dummyCert := NewCertificateLoader(config.DummyCertificate, config.DummyPrivateKey)
+	if _, err := dummyCert.Load(); err != nil {
+		log.Fatalf("Failed to load dummy certificate: %s", err)
+	}
+
 	db, err := sql.Open("postgres", config.DatabaseConnInfo)
 	if err != nil {
 		panic(err)
@@ -146,10 +147,12 @@ func main() {
 	hostRouter := &hostHandler{
 		reporterHandler: newReporter(db, config),
 		config:          config,
+		reporterCert:    reporterCert,
+		dummyCert:       dummyCert,
 	}
 
 	tlsConfig := &tls.Config{
-		GetCertificate:     makeGetCertificate(config),
+		GetCertificate:     hostRouter.getCertificate,
 		GetConfigForClient: hostRouter.getConfigForClient,
 	}
 

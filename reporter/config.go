@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto/tls"
+	"encoding/json"
+	"os"
 )
 
 type Config struct {
@@ -37,6 +39,16 @@ type Config struct {
 	// Local filesystem path to serve static files from. Leave empty to
 	// avoid serving files.
 	ReporterStaticFilesRoot string
+
+	// Certificate file for the reporter service.
+	ReporterCertificate string
+	// Private key file for the reporter service.
+	ReporterPrivateKey string
+
+	// Certificate file for the dummy test service.
+	DummyCertificate string
+	// Private key file for the dummy test service.
+	DummyPrivateKey string
 }
 
 var defaultConfig = Config{
@@ -61,4 +73,15 @@ var defaultConfig = Config{
 
 	ReporterApiPrefix:       "/api/v1",
 	ReporterStaticFilesRoot: "../server/public",
+}
+
+// (Partially) updates the configuration from the given file.
+func (c *Config) Update(filename string) error {
+	file, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	dec := json.NewDecoder(file)
+	return dec.Decode(c)
 }
