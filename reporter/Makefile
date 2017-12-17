@@ -1,5 +1,5 @@
 GOBIN := go
-FILES_CMD := git ls-files ':!*_test.go' ':!*/*' ':*.go'
+FILES_CMD := git ls-files ':!*_test.go' ':!*/*' ':*.go' ':!generate_cert.go'
 FILES := $(shell $(FILES_CMD))
 
 reporter: $(FILES)
