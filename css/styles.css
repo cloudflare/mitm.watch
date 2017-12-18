@@ -117,12 +117,68 @@ p {
   line-height: 2;
 }
 
+.hidden {
+  display: none;
+}
+
+#hidden-text {
+  padding: 5px 20px;
+  border: 1px solid #ddd;
+  background-color: #f2f2f2;
+}
+
+.learnmore {
+  color: #408BC8;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.btn-start {
+  color: #fff;
+  background-color: #408BC8;
+  border-color: #0275d8;
+  display: block;
+  font-weight: 400;
+  line-height: 1.25;
+  white-space: nowrap;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  border: 1px solid transparent;
+  padding: 0.75rem 3rem;
+  min-width: 45%;
+  margin: 25px auto;
+  font-size: 1rem;
+  border-radius: .25rem;
+  -webkit-transition: all .2s ease-in-out;
+  -o-transition: all .2s ease-in-out;
+  transition: all .2s ease-in-out;
+}
+
+.btn-start:hover {
+  color: #fff;
+  background-color: #025aa5;
+  border-color: #01549b;
+}
+
+.btn-start:focus {
+  -webkit-box-shadow: 0 0 0 2px rgba(2,117,216,.5);
+  box-shadow: 0 0 0 2px rgba(2,117,216,.5);
+}
+
+.content {
+  margin-bottom: 20px;
+  min-height: calc(90vh - 70px);
+}
+
 .footer {
+  height: 50px;
   background-color: #FFFFFF;
   height: 75px;
   position: absolute;
   left: 0; right: 0;
-  margin-top: 15px;
 }
 
 .footer-text {
@@ -130,6 +186,10 @@ p {
   margin-right: 5%;
   margin-top: 25px;
   font-size: 16px;
+}
+
+.confirm-checkbox {
+  margin-right: 12px;
 }
 
 table {
@@ -169,3 +229,4 @@ td {
   padding: 8px 10px;
 }
 
+  

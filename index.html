@@ -14,49 +14,107 @@
 
 <div class="cf-gradient"></div>
 
-<div class="main-hover-box"> 
-  <div class="cf-gradient2"></div>
-  <div class="hover-box">
-    <div class="box-content">
-      <h1>TLS 1.3 middleboxes test</h1>
+<div class="content">
+  <div class="main-hover-box"> 
+    <div class="cf-gradient2"></div>
+    <div class="hover-box">
+      <div class="box-content">
+        <h1>TLS 1.3 middleboxes test</h1>
 
-      <p>
-      This page performs some tests to check for middlebox interference with TLS 1.3.
-      For that it requires Adobe Flash and TCP port 843 to be open. If this is not the
-      case, all tests will fail with <em>N/A</em>.
-      </p>
+        <p>
+        This page performs some tests to check for middlebox interference with TLS 1.3.
+        For that it requires Adobe Flash and TCP port 843 to be open. If this is not the
+        case, all tests will fail with <em>N/A</em>.
+        </p>
 
-      <h2 class="results-text">Results</h2>
+        <p>
+        <label>
+        <input id="verbose" class="confirm-checkbox" type="checkbox" checked>
+        Enable additional MITM detection, this requires the server to record
+        test results.
+        </label>
+        <span class="learnmore" onclick="extratext()">Learn More</span></p>
 
-      <table id="results">
-        <thead>
-          <tr>
-            <th>TLS Version</th>
-            <th>IP Version</th>
-            <th>Status</th>
-            <th>Remark</th>
-          </tr>
-        </thead>
-    </table>
+        <div id="hidden-text" class="hidden">
+          <p>
+            The purpose of this tool is to gather insight in potential failure
+            modes of TLS 1.3. We aim for full transparency in what we do, data
+            will only be collected once the test starts.
+          </p>
 
-      <div id="flash-message">
-        <div class="flash-warning">
-          <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+          <h3>Information that we collect</h3>
+          <ul>
+            <li>IP address: used to learn what (mobile) networks or ISPs are
+              problematic.
+            <li>Result (pass/fail): whether a connection attempt succeeded and
+              whether the response matches the expectation.
+            <li>Contents of the simulated connection (TCP payload and session
+              keys): this should normally have an exact match with the server
+              view. A mismatch indicates potential issues.
+            <li>User Agent (web browser version): allows tests to be discarded
+              later in case we discover incompatibilities between a test and a
+              browser.
+            <li>If you choose to disable additional MITM detection, the above
+              will not be collected and finer analysis is not possible. As a
+              result the test report will be less informative.
+          </ul>
+
+          <h3>Who are we</h3>
+          <p>
+            This opensource project is built by <a
+            href="https://www.cloudflare.com/">Cloudflare</a>. We help building
+            a better (more secure) Internet and are involved in the
+            development and deployment of TLS 1.3 at scale.
+            To see the code or report issues, see this <a
+            href="https://github.com/cloudflare/mitm.watch">Github</a>
+            repository.
+          </p>
+
+          <h3>What we are going to do with the data</h3>
+          <ul>
+            <li>Aggregate results, providing a summary for the public.
+            <li>Help to make informed decisions in the development of the TLS
+              1.3 specification.
+            <li>Analyze potential middlebox interference.
+            <li>The raw data will be treated as confidential, but we may share
+              (a subset of) it with other researchers for scientific purposes.
+              This includes browser vendors who run similar tests.
+          </ul>
         </div>
-        <div class="flash-text">
-          Adobe Flash is currently required for its Socket API. Please activate the
-          Flash plugin below.
+
+        <button type="button" class="btn-start" id="action-start">Start The Test</button>
+
+        <h2 class="results-text">Results</h2>
+
+        <table id="results">
+          <thead>
+            <tr>
+              <th>TLS Version</th>
+              <th>IP Version</th>
+              <th>Status</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+      </table>
+
+        <div id="flash-message">
+          <div class="flash-warning">
+            <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+          </div>
+          <div class="flash-text">
+            Adobe Flash is currently required for its Socket API. Please activate the
+            Flash plugin below.
+          </div>
+          <div class="flash-text2">
+            Click and allow Flash to enable test
+          </div>
         </div>
-        <div class="flash-text2">
-          Click and allow Flash to enable test
-        </div>
+
+        <div id="socketApi"></div>
       </div>
-
-      <div id="socketApi"></div>
     </div>
   </div>
 </div>
-
 <div class="footer">
   <p class="footer-text">&copy;2017 Cloudflare</p>
 </div>
@@ -133,6 +191,14 @@ var updateStatus = function(status) {
     row.cells[3].textContent = desc;
 };
 </script>
+
+<script>
+function extratext() {
+   var element = document.getElementById("hidden-text");
+   element.classList.toggle("hidden");
+}
+</script>
+
 <script src="jssock.js"></script>
 </body>
 </html>
