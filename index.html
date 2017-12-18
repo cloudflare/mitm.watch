@@ -27,6 +27,7 @@
         case, all tests will fail with <em>N/A</em>.
         </p>
 
+        <div id="initial-info">
         <p>
         <label>
         <input id="verbose" class="confirm-checkbox" type="checkbox" checked>
@@ -83,6 +84,7 @@
         </div>
 
         <button type="button" class="btn-start" id="action-start">Start The Test</button>
+        </div>
 
         <h2 class="results-text">Results</h2>
 
@@ -131,6 +133,11 @@ if (window.chrome) {
 swfobject.embedSWF("socketapi.swf", "socketApi", "100", "100", "13", false, {},
                   {allowscriptaccess: "always"}, {}, null);
 
+var jssock;   // will be set by jssock.js
+// Test State.
+var TS_INIT = 0, TS_PENDING = 1, TS_RUNNING = 2;
+var testState = TS_INIT;
+
 var results = document.getElementById("results");
 var tlsVersions = {
   0x300: "SSL 3.0",
@@ -147,19 +154,66 @@ var detectStatus = function(exp) {
     return STATUS_FAIL;
   }
 };
+
+var setTestState = function(state) {
+  if (state === testState) {
+    // nothing to do
+    return;
+  }
+
+  if (state !== TS_INIT) {
+    document.body.classList.add("test-active");
+  } else {
+    document.body.classList.remove("test-active");
+  }
+  testState = state;
+};
+var startTests = function() {
+  var apiReady = document.body.classList.contains("booted");
+  console.log("startTests() - apiReady " + apiReady + ", state " + testState);
+  if (testState === TS_INIT) {
+    if (!apiReady) {
+      setTestState(TS_PENDING);
+      return;
+    }
+  } else if (testState === TS_PENDING) {
+    if (!apiReady) {
+      return;
+    }
+  } else {
+    // not allowed to start a new test while one is running.
+    return;
+  }
+  setTestState(TS_RUNNING);
+  jssock.StartTests();
+};
+document.getElementById("action-start").onclick = startTests;
+
+// Transitions:
+// (init) - jssock library not yet loaded
+// booting - jssock library loaded, waiting for Flash
+// booted - Flash ready.
 var updateStatus = function(status) {
+  console.log("updateStatus(" + status + ")");
   if (status === "booting") {
     // script has loaded, waiting for Flash
     setTimeout(function() {
-      if (document.body.className === "booting") {
-          document.body.className += " flash-please";
+      if (document.body.classList.contains("booting")) {
+          document.body.classList.add("flash-please");
         }
       }, 1000);
+      document.body.classList.add("booting");
   } else if (status === "booted") {
+    document.body.classList.remove("flash-please");
+    document.body.classList.remove("booting");
+    document.body.classList.add("booted");
+    // boot complete, run tests if it was requested by the user.
+    if (testState === TS_PENDING) {
+      startTests();
+    }
   }
-  document.body.className = status;
-},
-  addExperiment = function(exp) {
+};
+var addExperiment = function(exp) {
   if (results.tBodies.length === 0) {
     results.createTBody();
   }
@@ -168,8 +222,8 @@ var updateStatus = function(status) {
   item.insertCell().textContent = exp.IPv6 ? "IPv6" : "IPv4";
   item.insertCell().textContent = "Pending";
   item.insertCell(); // Description
-},
-  updateExperiment = function(i, exp) {
+};
+var updateExperiment = function(i, exp) {
   var row = results.tBodies[0].rows[i];
   var status = detectStatus(exp);
   row.cells[2].textContent = status;
@@ -177,18 +231,18 @@ var updateStatus = function(status) {
   var desc;
   if (status == STATUS_FAIL) {
     desc = exp.Result;
-      row.className = "status-fail";
+    row.className = "status-fail";
   } else if (status == STATUS_NA) {
     desc = exp.Result;
-      row.className = "status-na";
+    row.className = "status-na";
   } else if (exp.Expected) {
     desc = "Matches expected: " + exp.Expected;
-      row.className = "status-ok";
+    row.className = "status-ok";
   } else {
     desc = "";
-      row.className = "status-ok";
+    row.className = "status-ok";
   }
-    row.cells[3].textContent = desc;
+  row.cells[3].textContent = desc;
 };
 </script>
 

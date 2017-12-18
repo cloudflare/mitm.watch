@@ -1,25 +1,30 @@
 /*mitm.watch css styles*/
 /*v1.0*/
 
+body.test-active #initial-info,
+body:not(.test-active) #results,
 body:not(.booted) #results,
+body:not(.test-active) .results-text,
 body:not(.booted) .results-text,
-body #flash-message {
+body:not(.test-active) #socketApi,
+#flash-message {
   display: none;
 }
-body.booting.flash-please #socketApi {
+body.test-active.flash-please #socketApi {
   border: 2px solid red;
 }
 
-body.booting.flash-please #flash-message {
+body.test-active.flash-please #flash-message {
   margin: 30px 0 20px 0;
+  display: block;
 }
 
-body.booting.flash-please .flash-warning {
+#flash-message .flash-warning {
   color: red;
   display: inline;
   padding-right: 2%;
 }
-body.booting.flash-please .flash-text {
+#flash-message .flash-text {
   display: inline;
   line-height: 2;
 }
@@ -228,5 +233,3 @@ th {
 td {
   padding: 8px 10px;
 }
-
-  
