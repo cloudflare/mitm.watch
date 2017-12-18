@@ -47,10 +47,11 @@ else
 	$(RM) $(DEV_OBJS)
 endif
 
+STATIC_FILES_SRC := $(addprefix $(srcdir)/,$(STATIC_FILES))
 .PHONY: watch
 watch:
 	type kqwait >/dev/null 2>&1 || kqwait(){ inotifywait -q -e delete_self,close_write "$$@"; }; \
-	while :; do $(MAKE) DEV=$(DEV); kqwait $(CLIENT_FILES_SRC) $(CONFFILE); sleep .1; done
+	while :; do $(MAKE) DEV=$(DEV); kqwait $(CLIENT_FILES_SRC) $(STATIC_FILES_SRC) $(CONFFILE); sleep .1; done
 
 $(addprefix public/,$(STATIC_FILES)): public/% : $(srcdir)/% | public public/css
 	cp $< $@
