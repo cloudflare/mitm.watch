@@ -118,12 +118,12 @@ func runTests(testId string, specs []SubtestSpec) {
 	}
 }
 
-func main() {
-	updateStatus("booting")
-	once.Do(initSocketApi)
-	updateStatus("booted")
-
-	// TODO do this when starting tests va a button
+// startTests retrieves test cases, executes them and optionally submits test
+// results back to the server.
+func StartTests(verbose bool) {
+	if verbose {
+		// TODO retrieve just the list of tests
+	}
 	testId, specs, err := gatherTests()
 	if err != nil {
 		// TODO this could be a network error, show message to user
@@ -141,6 +141,24 @@ func main() {
 	}
 
 	runTests(testId, specs)
+}
+
+type JsApi struct{}
+
+func (*JsApi) StartTests(verbose bool) {
+	go StartTests(verbose)
+}
+
+func registerJSApi() {
+	jsApi := &JsApi{}
+	js.Global.Set("jssock", js.MakeWrapper(jsApi))
+}
+
+func main() {
+	updateStatus("booting")
+	once.Do(initSocketApi)
+	registerJSApi()
+	updateStatus("booted")
 }
 
 func tryTLS(domain string, version uint16) (string, error) {
