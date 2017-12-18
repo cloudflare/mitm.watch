@@ -7,8 +7,12 @@ body:not(.booted) #results,
 body:not(.test-active) .results-text,
 body:not(.booted) .results-text,
 body:not(.test-active) #socketApi,
+#status-text-booting,
 #flash-message {
   display: none;
+}
+body.test-active:not(.booting):not(.booted) #status-text-booting {
+  display: block;
 }
 body.test-active.flash-please #socketApi {
   border: 2px solid red;
