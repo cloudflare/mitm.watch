@@ -141,8 +141,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	sessionTimeout := time.Duration(config.SessionTimeoutSecs) * time.Second
-	wl := newListener(l, sessionTimeout, config.OriginAddress, makeIsOurHost(config))
+	initialReadTimeout := time.Duration(config.InitialReadTimeoutSecs) * time.Second
+	wl := newListener(l, initialReadTimeout, config.OriginAddress, makeIsOurHost(config))
 
 	hostRouter := &hostHandler{
 		reporterHandler: newReporter(db, config),
@@ -171,8 +171,10 @@ func main() {
 	hostRouter.tls13Config.MaxVersion = tls.VersionTLS13
 
 	server := &http.Server{
-		Handler:   hostRouter,
-		TLSConfig: tlsConfig,
+		Handler:      hostRouter,
+		TLSConfig:    tlsConfig,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 180 * time.Second,
 	}
 	err = server.ServeTLS(wl, "", "")
 	if err != nil {

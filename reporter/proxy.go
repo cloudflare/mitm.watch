@@ -12,6 +12,7 @@ func proxyConnection(c net.Conn, upstreamAddr string) error {
 	if err != nil {
 		return err
 	}
+	defer upC.Close()
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 

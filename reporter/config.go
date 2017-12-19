@@ -14,9 +14,8 @@ type Config struct {
 	// Test cases that the client should execute.
 	Subtests []SubtestSpec
 
-	// Timeout for reading the initial Client Hello message, and the timeout
-	// for processing requests.
-	SessionTimeoutSecs int
+	// Timeout for reading the initial Client Hello message.
+	InitialReadTimeoutSecs int
 
 	// Database connection configuration.
 	DatabaseConnInfo string
@@ -64,8 +63,8 @@ var defaultConfig = Config{
 	DatabaseConnInfo: "sslmode=disable",
 	ListenAddress:    ":4433",
 
-	OriginAddress:      "",
-	SessionTimeoutSecs: 60,
+	OriginAddress:          "",
+	InitialReadTimeoutSecs: 10,
 
 	HostReporter:   "l.ls-l.info",
 	HostSuffixIPv4: ".l4.ls-l.info",
