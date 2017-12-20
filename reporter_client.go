@@ -89,3 +89,11 @@ func CreateTest(testRequest createTestRequest) (string, []SubtestSpec, error) {
 	}
 	return testResponse.TestID, testResponse.Subtests, nil
 }
+
+// SaveTestResult saves the results of one test case, it must be executed only
+// once for the given subtest within a test.
+func SaveTestResult(testId string, subtestNumber int, testResult clientResult) error {
+	endpoint := fmt.Sprintf("/tests/%s/subtests/%d/clientresult",
+		testId, subtestNumber)
+	return doRequest("PUT", endpoint, testResult, nil)
+}

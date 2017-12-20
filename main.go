@@ -32,10 +32,14 @@ type Experiment struct {
 	Failed  bool
 }
 
-type keyLogPrinter struct{}
+type keyLogPrinter struct {
+	lines string
+}
 
-func (*keyLogPrinter) Write(line []byte) (int, error) {
-	fmt.Println(string(line))
+func (keylog *keyLogPrinter) Write(line []byte) (int, error) {
+	lineStr := string(line)
+	keylog.lines += lineStr + "\n"
+	fmt.Print(lineStr)
 	return len(line), nil
 }
 
@@ -81,7 +85,7 @@ func gatherTests() (string, []SubtestSpec, error) {
 	return CreateTest(testRequest)
 }
 
-func runTests(testId string, specs []SubtestSpec) {
+func runTests(testId string, specs []SubtestSpec, verbose bool) {
 	experiments := make([]Experiment, len(specs))
 	var wg sync.WaitGroup
 	for i, spec := range specs {
@@ -91,7 +95,23 @@ func runTests(testId string, specs []SubtestSpec) {
 		go func() {
 			defer wg.Done()
 			domain := specToDomain(testId, spec)
-			response, err := tryTLS(domain, spec.MaxTLSVersion)
+			result := clientResult{
+				BeginTime: time.Now().UTC(),
+				Frames:    []Frame{},
+				HasFailed: true,
+			}
+			response, err := tryTLS(domain, spec.MaxTLSVersion, &result)
+			result.EndTime = time.Now().UTC()
+			if verbose {
+				go func() {
+					err := SaveTestResult(testId, spec.Number, result)
+					if err != nil {
+						js.Global.Get("console").Call("log",
+							fmt.Sprintf("SaveTestResult(%s, %d) failed: %s",
+								testId, spec.Number, err))
+					}
+				}()
+			}
 
 			// TODO rewrite this, remove Experiment struct.
 			// Currently only here to avoid changing frontend
@@ -140,7 +160,7 @@ func StartTests(verbose bool) {
 		addExperiment(exp)
 	}
 
-	runTests(testId, specs)
+	runTests(testId, specs, verbose)
 }
 
 type JsApi struct{}
@@ -161,15 +181,16 @@ func main() {
 	updateStatus("booted")
 }
 
-func tryTLS(domain string, version uint16) (string, error) {
+func tryTLS(domain string, version uint16, result *clientResult) (string, error) {
 	conn, err := DialTCP("tcp", net.JoinHostPort(domain, tlsPort))
 	if err != nil {
 		return "", err
 	}
 	defer conn.Close()
+	keylog := &keyLogPrinter{}
 	tls_config := &tls.Config{
 		ServerName:   domain,
-		KeyLogWriter: &keyLogPrinter{},
+		KeyLogWriter: keylog,
 		MinVersion:   version,
 		MaxVersion:   version,
 	}
@@ -181,6 +202,15 @@ func tryTLS(domain string, version uint16) (string, error) {
 	}
 
 	tls_conn := tls.Client(conn, tls_config)
+
+	if err := tls_conn.Handshake(); err != nil {
+		return "", err
+	}
+	// Handshake successful, store version and keys
+	result.ActualTLSVersion = tls_conn.ConnectionState().Version
+	result.KeyLog = keylog.lines
+	// result.Frames = ... TODO
+
 	request := fmt.Sprintf("GET / HTTP/1.1\r\nHost: %s\r\n\r\n", domain)
 	n, err := tls_conn.Write([]byte(request))
 	if err != nil {
@@ -193,6 +223,7 @@ func tryTLS(domain string, version uint16) (string, error) {
 	}
 	fmt.Println("Response:")
 	fmt.Printf("%s", response[:n])
+	result.HasFailed = false
 	return string(response[:n]), nil
 }
 

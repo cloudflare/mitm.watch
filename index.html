@@ -180,6 +180,7 @@ var setTestState = function(state) {
 };
 var startTests = function() {
   var apiReady = document.body.classList.contains("booted");
+  var verbose = document.getElementById("verbose").checked;
   console.log("startTests() - apiReady " + apiReady + ", state " + testState);
   if (testState === TS_INIT) {
     if (!apiReady) {
@@ -195,7 +196,7 @@ var startTests = function() {
     return;
   }
   setTestState(TS_RUNNING);
-  jssock.StartTests();
+  jssock.StartTests(verbose);
 };
 document.getElementById("action-start").onclick = startTests;
 

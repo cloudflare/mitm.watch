@@ -20,30 +20,8 @@ type createTestResponse struct {
 	Subtests []SubtestSpec `json:"subtests"`
 }
 
-// Specification of a subtest
-type SubtestSpec struct {
-	Number        int    `json:"number"`
-	MaxTLSVersion uint16 `json:"max_tls_version"`
-	IsIPv6        bool   `json:"is_ipv6"`
-}
-
-// Actual instantiation of a subtest.
-type Subtest struct {
-	Number        int    `json:"number"`
-	MaxTLSVersion uint16 `json:"max_tls_version"`
-	IsIPv6        bool   `json:"is_ipv6"`
-	HasFailed     bool   `json:"has_failed"`
-	IsMitm        bool   `json:"is_mitm"`
-}
-
-type Frame struct {
-	Time   time.Time `json:"time"`
-	IsRead bool      `json:"is_read"`
-	Data   []byte    `json:"data"`
-}
-
-type Capture struct {
-	CreatedAt        time.Time `json:"created_at"`
+// Similar to ClientCapture on the server, but without CreatedAt field.
+type clientResult struct {
 	BeginTime        time.Time `json:"begin_time"`
 	EndTime          time.Time `json:"end_time"`
 	ActualTLSVersion uint16    `json:"actual_tls_version"`
@@ -52,6 +30,15 @@ type Capture struct {
 	HasFailed        bool      `json:"has_failed"`
 }
 
-type ClientCapture struct {
-	Capture
+// Specification of a subtest
+type SubtestSpec struct {
+	Number        int    `json:"number"`
+	MaxTLSVersion uint16 `json:"max_tls_version"`
+	IsIPv6        bool   `json:"is_ipv6"`
+}
+
+type Frame struct {
+	Time   time.Time `json:"time"`
+	IsRead bool      `json:"is_read"`
+	Data   []byte    `json:"data"`
 }
