@@ -201,7 +201,8 @@ func tryTLS(domain string, version uint16, result *clientResult) (string, error)
 		tls_config.InsecureSkipVerify = true
 	}
 
-	tls_conn := tls.Client(conn, tls_config)
+	tappedConn := NewCaptureConn(conn, &result.Frames)
+	tls_conn := tls.Client(tappedConn, tls_config)
 
 	if err := tls_conn.Handshake(); err != nil {
 		return "", err
@@ -209,7 +210,6 @@ func tryTLS(domain string, version uint16, result *clientResult) (string, error)
 	// Handshake successful, store version and keys
 	result.ActualTLSVersion = tls_conn.ConnectionState().Version
 	result.KeyLog = keylog.lines
-	// result.Frames = ... TODO
 
 	request := fmt.Sprintf("GET / HTTP/1.1\r\nHost: %s\r\n\r\n", domain)
 	n, err := tls_conn.Write([]byte(request))

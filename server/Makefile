@@ -7,7 +7,7 @@ CADDY_GOPATH := $(CURDIR)/go
 # Build for another platform
 #CADDY_BUILD_ARGS := -goos=linux
 
-CLIENT_FILES := main.go models_client.go reporter_client.go
+CLIENT_FILES := main.go models_client.go reporter_client.go capture_conn.go
 STATIC_FILES := index.html css/responsive.css css/styles.css
 OBJS := public/jssock.js public/socketapi.swf
 OBJS += $(addprefix public/,$(STATIC_FILES))
