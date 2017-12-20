@@ -143,6 +143,7 @@ func main() {
 	}
 	initialReadTimeout := time.Duration(config.InitialReadTimeoutSecs) * time.Second
 	wl := newListener(l, initialReadTimeout, config.OriginAddress, makeIsOurHost(config))
+	go wl.Serve()
 
 	hostRouter := &hostHandler{
 		reporterHandler: newReporter(db, config),
