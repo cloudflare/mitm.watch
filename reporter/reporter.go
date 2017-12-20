@@ -55,7 +55,7 @@ func newReporter(db *sql.DB, config *Config) *reporter {
 	{
 		v1.POST("/tests", rep.createTest)
 		v1.PATCH("/tests/:testid", rep.updateTest)
-		v1.POST("/tests/:testid/subtests/:number/clientresult", rep.addClientResult)
+		v1.PUT("/tests/:testid/subtests/:number/clientresult", rep.addClientResult)
 	}
 	authorized := v1.Group("/", authRequired)
 	{
