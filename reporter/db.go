@@ -213,3 +213,93 @@ func (model *ClientCapture) Create(tx *sql.Tx) error {
 	)
 	return err
 }
+
+// Create a new ServerCapture model. Required field: SubtestID, Frames,
+// ClientIP, ServerIP. Fields that are updated: ID, CreatedAt.
+func (model *ServerCapture) Create(tx *sql.Tx) error {
+	if model.SubtestID == 0 {
+		return errors.New("SubtestID must be initialized!")
+	}
+	if model.Frames == nil {
+		return errors.New("Frames must be initialized")
+	}
+	if model.ClientIP == nil {
+		return errors.New("client IP must be initialized")
+	}
+	if model.ServerIP == nil {
+		return errors.New("server IP must be initialized")
+	}
+	clientIP := model.ClientIP.String()
+	serverIP := model.ServerIP.String()
+	frames, err := json.Marshal(model.Frames)
+	if err != nil {
+		return err
+	}
+	err = tx.QueryRow(`
+	INSERT INTO server_captures (
+		-- id,
+		subtest_id,
+		created_at,
+		begin_time,
+		end_time,
+		actual_tls_version,
+		frames,
+		key_log,
+		has_failed,
+		client_ip,
+		server_ip
+	) VALUES (
+		--              -- id,
+		$1,             -- subtest_id,
+		now(),          -- created_at,
+		$2,             -- begin_time,
+		$3,             -- end_time,
+		$4,             -- actual_tls_version,
+		$5,             -- frames,
+		$6,             -- key_log,
+		$7,             -- has_failed,
+		$8,             -- client_ip,
+		$9              -- server_ip
+	) RETURNING
+		id,
+		created_at
+	`,
+		//&model.ID,
+		&model.SubtestID,
+		//&model.CreatedAt,
+		&model.BeginTime,
+		&model.EndTime,
+		&model.ActualTLSVersion,
+		&frames,
+		&model.KeyLog,
+		&model.HasFailed,
+		&clientIP,
+		&serverIP,
+	).Scan(
+		&model.ID,
+		&model.CreatedAt,
+	)
+	return err
+}
+
+// QuerySubtest finds SubtestID that covers the given (testID, number) pair. No
+// result is returned if the test has already concluded (this is not an error).
+func QuerySubtest(db *sql.DB, testID string, number int, mutableTestPeriodSecs int) (int, error) {
+	var subtestID int
+	err := db.QueryRow(`
+	SELECT
+		subtests.id
+	FROM subtests
+	JOIN tests
+	ON subtests.test_id = tests.id
+	WHERE
+		tests.test_id = $1 AND
+		subtests.number = $2 AND
+		is_pending AND
+		now() - created_at < $3
+	`, testID, number, mutableTestPeriodSecs).Scan(&subtestID)
+	if err != nil && err != sql.ErrNoRows {
+		return 0, err
+	}
+	return subtestID, nil
+}

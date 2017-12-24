@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,19 +46,91 @@ func isTestHost(host string, config *Config) bool {
 	return strings.HasSuffix(host, config.HostSuffixIPv4) || strings.HasSuffix(host, config.HostSuffixIPv6)
 }
 
-func makeIsOurHost(config *Config) RequestClaimer {
-	return func(host string) (bool, bool) {
+func makeIsOurHost(db *sql.DB, config *Config) RequestClaimer {
+	return func(host string) (bool, int) {
 		host = strings.ToLower(host)
 		if host == config.HostReporter {
 			// pass to HTTP handler, handle API requests.
-			return true, false
+			return true, 0
 		}
 		if isTestHost(host, config) {
 			// pass to HTTP handler, handling a basic response.
 			// Logging is tentatively enabled.
-			return true, true
+			return true, prepareServerCapture(db, config, host)
 		}
-		return false, false
+		return false, 0
+	}
+}
+
+func prepareServerCapture(db *sql.DB, config *Config, host string) int {
+	testID, number := parseTestHost(config, host)
+	if testID == "" {
+		log.Printf("Host \"%s\" is not a valid test domain, ignoring", host)
+		return 0
+	}
+	subtestID, err := QuerySubtest(db, testID, number, config.MutableTestPeriodSecs)
+	if err != nil {
+		log.Printf("Failed to query subtest for \"%s\": %s", host, err)
+		return 0
+	}
+	if subtestID == 0 {
+		log.Printf("Not accepting server capture for \"%s\"", host)
+		return 0
+	}
+	return subtestID
+}
+
+// parses a host name of the form "<testID>-<number><suffix>", returning the
+// TestID and subtest number. On error, the testID is empty.
+func parseTestHost(config *Config, host string) (string, int) {
+	var prefix string
+	switch {
+	case strings.HasSuffix(host, config.HostSuffixIPv4):
+		prefix = host[:len(host)-len(config.HostSuffixIPv4)]
+	case strings.HasSuffix(host, config.HostSuffixIPv6):
+		prefix = host[:len(host)-len(config.HostSuffixIPv6)]
+	default:
+		return "", 0
+	}
+
+	// testID UUID is always 36 chars followed by "-" and number.
+	if len(prefix) < 36+2 || prefix[36] != '-' {
+		return "", 0
+	}
+	testID, numberStr := prefix[0:36], prefix[37:]
+	if !ValidateUUID(testID) {
+		return "", 0
+	}
+	number, err := strconv.Atoi(numberStr)
+	if err != nil || number <= 0 {
+		return "", 0
+	}
+
+	return testID, number
+}
+
+func newServerCaptureReady(db *sql.DB) func(*ServerCapture) {
+	return func(serverCapture *ServerCapture) {
+		tx, err := db.Begin()
+		if err != nil {
+			log.Printf("Failed to begin transaction: %s", err)
+			return
+		}
+		defer func() {
+			if tx != nil {
+				tx.Rollback()
+			}
+		}()
+
+		err = serverCapture.Create(tx)
+		if err != nil {
+			log.Printf("Failed to create server capture: %s", err)
+			return
+		}
+
+		log.Printf("Stored server capture: %d", serverCapture.ID)
+		tx.Commit()
+		tx = nil
 	}
 }
 
@@ -142,7 +215,7 @@ func main() {
 		panic(err)
 	}
 	initialReadTimeout := time.Duration(config.InitialReadTimeoutSecs) * time.Second
-	wl := newListener(l, initialReadTimeout, config.OriginAddress, makeIsOurHost(config))
+	wl := newListener(l, initialReadTimeout, config.OriginAddress, makeIsOurHost(db, config), newServerCaptureReady(db))
 	go wl.Serve()
 
 	hostRouter := &hostHandler{

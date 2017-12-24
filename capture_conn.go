@@ -45,6 +45,12 @@ func (c *CaptureConn) captureFrame(b []byte, isRead bool) {
 	*c.frames = append(*c.frames, frame)
 }
 
-func (c *CaptureConn) StopCapture() {
+// StopCapture stops recording more frames. Returns true if a non-empty capture
+// was just closed and false otherwise.
+func (c *CaptureConn) StopCapture() bool {
+	if c.frames == nil || len(*c.frames) == 0 {
+		return false
+	}
 	c.frames = nil
+	return true
 }

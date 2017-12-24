@@ -1,12 +1,14 @@
-// A net.Conn implementation which allows for buffering the initial read such
-// that it can be peeked into without consuming it in the actual read buffer.
+// Various net.Conn implementations to support peeking or capturing data.
 package main
 
 import (
 	"net"
 	"sync"
+	"time"
 )
 
+// A net.Conn implementation which allows for buffering the initial read such
+// that it can be peeked into without consuming it in the actual read buffer.
 type conn struct {
 	net.Conn
 	readBuffer []byte
@@ -50,4 +52,19 @@ func (c *conn) Read(b []byte) (int, error) {
 		c.readLock.Unlock()
 	}
 	return c.Conn.Read(b)
+}
+
+type serverCaptureConn struct {
+	*CaptureConn
+	info               *ServerCapture
+	ServerCaptureReady func(*ServerCapture)
+}
+
+func (c *serverCaptureConn) Close() error {
+	err := c.CaptureConn.Close()
+	if c.CaptureConn.StopCapture() {
+		c.info.EndTime = time.Now().UTC()
+		c.ServerCaptureReady(c.info)
+	}
+	return err
 }
