@@ -136,15 +136,17 @@ func newServerCaptureReady(db *sql.DB) func(*ServerCapture) {
 
 func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	config := h.config
-	host := strings.ToLower(parseHost(r.Host))
+	sni := strings.ToLower(r.TLS.ServerName)
 
-	if host == config.HostReporter {
-		h.reporterHandler.ServeHTTP(w, r)
+	// Use SNI instead of Host header, a capture is based on the former.
+	if isTestHost(sni, config) {
+		w.Write([]byte("Hello world!\n"))
 		return
 	}
-	if isTestHost(host, config) {
-		// magic response that should be checked for by the client
-		w.Write([]byte("Hello world!\n"))
+
+	host := strings.ToLower(parseHost(r.Host))
+	if host == config.HostReporter {
+		h.reporterHandler.ServeHTTP(w, r)
 		return
 	}
 
