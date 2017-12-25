@@ -70,6 +70,10 @@ func (c *serverCaptureConn) Close() error {
 	return err
 }
 
+func (c *serverCaptureConn) SetActualTLSVersion(version uint16) {
+	c.info.ActualTLSVersion = version
+}
+
 type serverKeyLog struct {
 	lines *string
 	next  io.Writer

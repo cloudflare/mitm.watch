@@ -6,13 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	_ "github.com/lib/pq"
 )
@@ -141,13 +144,52 @@ func newServerCaptureReady(db *sql.DB) func(*ServerCapture) {
 	}
 }
 
+func serverCaptureConnFromTLSConn(tlsConn *tls.Conn) (*serverCaptureConn, error) {
+	netConn := reflect.Indirect(reflect.ValueOf(tlsConn)).FieldByName("conn")
+	if !netConn.IsValid() || netConn.Kind() != reflect.Interface {
+		return nil, errors.New("unexpected missing field, have internals changed?")
+	}
+	conn := *(*net.Conn)(unsafe.Pointer(netConn.UnsafeAddr()))
+	serverConn, ok := conn.(*serverCaptureConn)
+	if !ok {
+		return nil, fmt.Errorf("Unexpected connection type: %T", conn)
+	}
+	return serverConn, nil
+}
+
 func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	config := h.config
 	sni := strings.ToLower(r.TLS.ServerName)
 
 	// Use SNI instead of Host header, a capture is based on the former.
 	if isTestHost(sni, config) {
-		w.Write([]byte("Hello world!\n"))
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "unexpected interface", http.StatusInternalServerError)
+			return
+		}
+		conn, bufrw, err := hj.Hijack()
+		if err != nil {
+			log.Println("Hijack failed: " + err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer conn.Close()
+
+		if tlsConn, ok := conn.(*tls.Conn); ok {
+			serverConn, err := serverCaptureConnFromTLSConn(tlsConn)
+			if err != nil {
+				log.Printf("Failed to set version: %s", err)
+			} else {
+				serverConn.SetActualTLSVersion(r.TLS.Version)
+			}
+		}
+
+		body := []byte("Hello world!\n")
+		bufrw.WriteString("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n")
+		bufrw.WriteString(fmt.Sprintf("Content-Length: %d\r\n\r\n", len(body)))
+		bufrw.Write(body)
+		bufrw.Flush()
 		return
 	}
 
