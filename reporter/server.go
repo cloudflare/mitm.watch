@@ -187,6 +187,7 @@ func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		body := []byte("Hello world!\n")
 		bufrw.WriteString("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n")
+		bufrw.WriteString("Connection: close\r\n")
 		bufrw.WriteString(fmt.Sprintf("Content-Length: %d\r\n\r\n", len(body)))
 		bufrw.Write(body)
 		bufrw.Flush()
