@@ -36,6 +36,11 @@ func (h *hostHandler) getConfigForClient(info *tls.ClientHelloInfo) (*tls.Config
 			// context to the keylog callback.
 			tlsConfig := h.tls13Config.Clone()
 			tlsConfig.KeyLogWriter = serverKeyLog{&c.info.KeyLog, tlsConfig.KeyLogWriter}
+			// Note: as a side-effect, this disables HTTP/2 support
+			// (as desired, our tests use plain HTTP). Normally
+			// http.Server.ServeTLS enables TLS, but since we have
+			// cloned TLSConfig before that, it remains disabled in
+			// the cloned tls13Config.
 			return tlsConfig, nil
 		}
 		return h.tls13Config, nil
