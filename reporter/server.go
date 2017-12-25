@@ -32,7 +32,7 @@ func (h *hostHandler) getConfigForClient(info *tls.ClientHelloInfo) (*tls.Config
 			// clone the TLS configuration in order to pass some
 			// context to the keylog callback.
 			tlsConfig := h.tls13Config.Clone()
-			tlsConfig.KeyLogWriter = serverKeyLog{&c.info.KeyLog}
+			tlsConfig.KeyLogWriter = serverKeyLog{&c.info.KeyLog, tlsConfig.KeyLogWriter}
 			return tlsConfig, nil
 		}
 		return h.tls13Config, nil

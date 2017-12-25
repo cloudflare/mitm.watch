@@ -2,6 +2,7 @@
 package main
 
 import (
+	"io"
 	"net"
 	"sync"
 	"time"
@@ -71,9 +72,13 @@ func (c *serverCaptureConn) Close() error {
 
 type serverKeyLog struct {
 	lines *string
+	next  io.Writer
 }
 
 func (l serverKeyLog) Write(line []byte) (int, error) {
 	*l.lines += string(line)
+	if l.next != nil {
+		return l.next.Write(line)
+	}
 	return len(line), nil
 }
