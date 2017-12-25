@@ -218,7 +218,7 @@ func tryTLS(domain string, version uint16, result *clientResult) (string, error)
 	}
 	response := make([]byte, 1024)
 	n, err = tls_conn.Read(response)
-	if err != nil {
+	if n == 0 {
 		return "", err
 	}
 	fmt.Println("Response:")
