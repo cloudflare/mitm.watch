@@ -28,6 +28,13 @@ func (h *hostHandler) getCertificate(info *tls.ClientHelloInfo) (*tls.Certificat
 // Sets the maximum version for the test server target to TLS 1.3.
 func (h *hostHandler) getConfigForClient(info *tls.ClientHelloInfo) (*tls.Config, error) {
 	if isTestHost(info.ServerName, h.config) {
+		if c, ok := info.Conn.(*serverCaptureConn); ok {
+			// clone the TLS configuration in order to pass some
+			// context to the keylog callback.
+			tlsConfig := h.tls13Config.Clone()
+			tlsConfig.KeyLogWriter = serverKeyLog{&c.info.KeyLog}
+			return tlsConfig, nil
+		}
 		return h.tls13Config, nil
 	}
 	return nil, nil

@@ -68,3 +68,12 @@ func (c *serverCaptureConn) Close() error {
 	}
 	return err
 }
+
+type serverKeyLog struct {
+	lines *string
+}
+
+func (l serverKeyLog) Write(line []byte) (int, error) {
+	*l.lines += string(line)
+	return len(line), nil
+}
