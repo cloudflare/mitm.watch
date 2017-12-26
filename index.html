@@ -104,7 +104,12 @@
               <th>Remark</th>
             </tr>
           </thead>
-      </table>
+        </table>
+
+        <p id="test-complete-message">
+          Tests are complete.
+          <button type="button" class="btn-restart" id="action-restart">Restart</button>
+        </p>
 
         <div id="flash-message">
           <div class="flash-warning">
@@ -145,7 +150,7 @@ swfobject.embedSWF("socketapi.swf", "socketApi", "100", "100", "13", false, {},
 
 var jssock;   // will be set by jssock.js
 // Test State.
-var TS_INIT = 0, TS_PENDING = 1, TS_RUNNING = 2;
+var TS_INIT = 0, TS_PENDING = 1, TS_RUNNING = 2, TS_COMPLETE;
 var testState = TS_INIT;
 
 var results = document.getElementById("results");
@@ -176,6 +181,11 @@ var setTestState = function(state) {
   } else {
     document.body.classList.remove("test-active");
   }
+  if (state === TS_COMPLETE) {
+    document.body.classList.add("test-complete");
+  } else {
+    document.body.classList.remove("test-complete");
+  }
   testState = state;
 };
 var startTests = function() {
@@ -199,6 +209,16 @@ var startTests = function() {
   jssock.StartTests(verbose);
 };
 document.getElementById("action-start").onclick = startTests;
+var restartTests = function() {
+  if (testState === TS_COMPLETE) {
+    var table = results.tBodies[0];
+    while (table.rows.length > 0) {
+      table.deleteRow(-1);
+    }
+    setTestState(TS_INIT);
+  }
+};
+document.getElementById("action-restart").onclick = restartTests;
 
 // Transitions:
 // (init) - jssock library not yet loaded
@@ -229,6 +249,7 @@ var addExperiment = function(exp) {
     results.createTBody();
   }
   var item = results.tBodies[0].insertRow();
+  item.className = "status-pending";
   item.insertCell().textContent = tlsVersions[exp.Version];
   item.insertCell().textContent = exp.IPv6 ? "IPv6" : "IPv4";
   item.insertCell().textContent = "Pending";
@@ -254,6 +275,9 @@ var updateExperiment = function(i, exp) {
     row.className = "status-ok";
   }
   row.cells[3].textContent = desc;
+  if (results.getElementsByClassName("status-pending").length === 0) {
+    setTestState(TS_COMPLETE);
+  }
 };
 
 function extratext() {

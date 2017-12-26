@@ -6,7 +6,8 @@ body:not(.test-active) #results,
 body:not(.booted) #results,
 body:not(.test-active) .results-text,
 body:not(.booted) .results-text,
-body:not(.test-active) #socketApi,
+/* body:not(.test-active) #socketApi, */
+body:not(.test-complete) #test-complete-message,
 #status-text-booting,
 #flash-message {
   display: none;
