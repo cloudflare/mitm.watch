@@ -124,28 +124,15 @@ func parseTestHost(config *Config, host string) (string, int) {
 	return testID, number
 }
 
-func newServerCaptureReady(db *sql.DB) func(*ServerCapture) {
-	return func(serverCapture *ServerCapture) {
-		tx, err := db.Begin()
-		if err != nil {
-			log.Printf("Failed to begin transaction: %s", err)
-			return
-		}
-		defer func() {
-			if tx != nil {
-				tx.Rollback()
-			}
-		}()
-
-		err = serverCapture.Create(tx)
+func newServerCaptureReady(db *sql.DB) ServerCaptureNotifier {
+	return func(name string, serverCapture *ServerCapture) {
+		err := serverCapture.Create(db)
 		if err != nil {
 			log.Printf("Failed to create server capture: %s", err)
 			return
 		}
 
-		log.Printf("Stored server capture: %d", serverCapture.ID)
-		tx.Commit()
-		tx = nil
+		log.Printf("Stored server capture for %s: %d", name, serverCapture.ID)
 	}
 }
 

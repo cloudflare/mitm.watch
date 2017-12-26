@@ -8,6 +8,10 @@ import (
 	"net"
 )
 
+type Querier interface {
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
 // Create a new Test model. Required field: ClientIP. Fields that are updated:
 // ID, TestID, CreatedAt, UpdatedAt.
 func (model *Test) Create(tx *sql.Tx) error {
@@ -162,7 +166,7 @@ func (model *Subtest) Create(tx *sql.Tx) error {
 
 // Create a new ClientCapture model. Required field: SubtestID, Frames. Fields
 // that are updated: ID, CreatedAt.
-func (model *ClientCapture) Create(tx *sql.Tx) error {
+func (model *ClientCapture) Create(querier Querier) error {
 	if model.SubtestID == 0 {
 		return errors.New("SubtestID must be initialized!")
 	}
@@ -173,7 +177,7 @@ func (model *ClientCapture) Create(tx *sql.Tx) error {
 	if err != nil {
 		return err
 	}
-	err = tx.QueryRow(`
+	err = querier.QueryRow(`
 	INSERT INTO client_captures (
 		-- id,
 		subtest_id,
@@ -216,7 +220,7 @@ func (model *ClientCapture) Create(tx *sql.Tx) error {
 
 // Create a new ServerCapture model. Required field: SubtestID, Frames,
 // ClientIP, ServerIP. Fields that are updated: ID, CreatedAt.
-func (model *ServerCapture) Create(tx *sql.Tx) error {
+func (model *ServerCapture) Create(querier Querier) error {
 	if model.SubtestID == 0 {
 		return errors.New("SubtestID must be initialized!")
 	}
@@ -235,7 +239,7 @@ func (model *ServerCapture) Create(tx *sql.Tx) error {
 	if err != nil {
 		return err
 	}
-	err = tx.QueryRow(`
+	err = querier.QueryRow(`
 	INSERT INTO server_captures (
 		-- id,
 		subtest_id,

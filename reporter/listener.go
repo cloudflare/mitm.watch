@@ -17,6 +17,9 @@ const maxHttpsQueueSize = 1024
 // should claim the request and if a ServerCapture template if it should record.
 type RequestClaimer func(host string) (claimed bool, subtestID int)
 
+// ServerCaptureNotifier is emitted when a server capture is completed.
+type ServerCaptureNotifier func(name string, capture *ServerCapture)
+
 type listener struct {
 	net.Listener
 
@@ -26,7 +29,7 @@ type listener struct {
 	ClaimRequest RequestClaimer
 
 	// invoked when a server capture is ready.
-	ServerCaptureReady func(*ServerCapture)
+	ServerCaptureReady ServerCaptureNotifier
 
 	// queue for new connections, intended for reporter or test services.
 	newc chan net.Conn
@@ -34,7 +37,7 @@ type listener struct {
 	connectionsWg sync.WaitGroup
 }
 
-func newListener(ln net.Listener, initialReadTimeout time.Duration, originAddress string, claimer RequestClaimer, serverCaptureReady func(*ServerCapture)) *listener {
+func newListener(ln net.Listener, initialReadTimeout time.Duration, originAddress string, claimer RequestClaimer, serverCaptureReady ServerCaptureNotifier) *listener {
 	newc := make(chan net.Conn, maxHttpsQueueSize)
 	return &listener{
 		Listener:           ln,
@@ -107,6 +110,7 @@ func (ln *listener) handleConnection(c net.Conn) {
 			}
 			capturedConn := &serverCaptureConn{
 				CaptureConn:        NewCaptureConn(peekableConn, &serverCapture.Frames),
+				name:               sni,
 				info:               serverCapture,
 				ServerCaptureReady: ln.ServerCaptureReady,
 			}

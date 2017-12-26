@@ -404,27 +404,13 @@ func (r *reporter) addClientResult(c *gin.Context) {
 			return
 		}
 
-		tx, err := r.db.Begin()
-		if err != nil {
-			r.dbError(c, err)
-			return
-		}
-		defer func() {
-			if tx != nil {
-				tx.Rollback()
-			}
-		}()
-
-		err = clientCapture.Create(tx)
+		err = clientCapture.Create(r.db)
 		if err != nil {
 			r.dbError(c, err)
 			return
 		}
 
 		// TODO set IsPending if all subtests are complete
-
-		tx.Commit()
-		tx = nil
 	}
 }
 

@@ -57,15 +57,16 @@ func (c *conn) Read(b []byte) (int, error) {
 
 type serverCaptureConn struct {
 	*CaptureConn
+	name               string
 	info               *ServerCapture
-	ServerCaptureReady func(*ServerCapture)
+	ServerCaptureReady ServerCaptureNotifier
 }
 
 func (c *serverCaptureConn) Close() error {
 	err := c.CaptureConn.Close()
 	if c.CaptureConn.StopCapture() {
 		c.info.EndTime = time.Now().UTC()
-		c.ServerCaptureReady(c.info)
+		c.ServerCaptureReady(c.name, c.info)
 	}
 	return err
 }
