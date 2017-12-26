@@ -19,26 +19,35 @@ func supportsGzip(header string) bool {
 	return false
 }
 
-type GzipResponseWriter struct {
+// GzipFixupResponseWriter removes the Content-Encoding header when needed.
+type GzipFixupResponseWriter struct {
 	http.ResponseWriter
-	gzipWriter *gzip.Writer
 }
 
-func NewGzipResponseWriter(w http.ResponseWriter) *GzipResponseWriter {
-	return &GzipResponseWriter{w, gzip.NewWriter(w)}
-}
-
-func (w *GzipResponseWriter) Write(data []byte) (int, error) {
-	return w.gzipWriter.Write(data)
-}
-
-func (w *GzipResponseWriter) WriteHeader(code int) {
+func (w *GzipFixupResponseWriter) WriteHeader(code int) {
 	if code >= 300 {
 		// OK and Partial Content may keep Content-Encoding, but Not
 		// Modified does not have any content.
 		w.Header().Del("Content-Encoding")
 	}
 	w.ResponseWriter.WriteHeader(code)
+}
+
+// GzipResponseWriter gzip compresses the response.
+type GzipResponseWriter struct {
+	http.ResponseWriter
+	gzipWriter *gzip.Writer
+}
+
+func NewGzipResponseWriter(w http.ResponseWriter) *GzipResponseWriter {
+	return &GzipResponseWriter{
+		&GzipFixupResponseWriter{w},
+		gzip.NewWriter(w),
+	}
+}
+
+func (w *GzipResponseWriter) Write(data []byte) (int, error) {
+	return w.gzipWriter.Write(data)
 }
 
 func StaticFileGz(group gin.IRoutes, relativePath, filepath string) {
@@ -59,7 +68,8 @@ func StaticFileGz(group gin.IRoutes, relativePath, filepath string) {
 				if gzFile, err := os.Open(nameGz); err == nil {
 					defer gzFile.Close()
 					c.Header("Content-Encoding", "gzip")
-					http.ServeContent(c.Writer, c.Request, nameGz, info.ModTime(), gzFile)
+					writer := &GzipFixupResponseWriter{c.Writer}
+					http.ServeContent(writer, c.Request, filepath, info.ModTime(), gzFile)
 					return
 				}
 			}
