@@ -76,9 +76,9 @@ func specToDomain(testId string, spec SubtestSpec) string {
 }
 
 func gatherTests(verbose bool) (string, []SubtestSpec, error) {
+	clientVersion := js.Global.Get("jssockClientVersion").String()
 	testRequest := createTestRequest{
-		// TODO populate client version
-		ClientVersion: "TEST",
+		ClientVersion: clientVersion,
 		FlashVersion:  "",
 		UserAgent:     js.Global.Get("navigator").Get("userAgent").String(),
 	}

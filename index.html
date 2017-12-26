@@ -255,15 +255,21 @@ var updateExperiment = function(i, exp) {
   }
   row.cells[3].textContent = desc;
 };
-</script>
 
-<script>
 function extratext() {
    var element = document.getElementById("hidden-text");
    element.classList.toggle("hidden");
 }
 </script>
 
-<script src="jssock.js"></script>
+<script>
+// cache bump
+var jssockClientVersion = "TEST"; // this line will be updated automatically.
+(function() {
+  var s = document.createElement("script");
+  s.src = "jssock.js?v=" + encodeURIComponent(jssockClientVersion);
+  document.body.appendChild(s);
+}());
+</script>
 </body>
 </html>

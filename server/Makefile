@@ -53,7 +53,12 @@ watch:
 	type kqwait >/dev/null 2>&1 || kqwait(){ inotifywait -q -e delete_self,close_write "$$@"; }; \
 	while :; do $(MAKE) DEV=$(DEV); kqwait $(CLIENT_FILES_SRC) $(STATIC_FILES_SRC) $(CONFFILE); sleep .1; done
 
-$(addprefix public/,$(STATIC_FILES)): public/% : $(srcdir)/% | public public/css
+# complicated logic just to insert a client version...
+public/index.html: $(srcdir)/index.html $(CLIENT_FILES_SRC) $(CONFFILE) | public
+	clientver=$$(cd $(srcdir) && git log -n1 --oneline --abbrev=12 -- $^ | sed 's/ .*//'); \
+	sed -e "s/^\(var jssockClientVersion = \).*/\1\"$$clientver\";/" $< >$@
+
+$(addprefix public/,$(filter-out index.html, $(STATIC_FILES))): public/% : $(srcdir)/% | public public/css
 	cp $< $@
 $(addprefix public/,$(CLIENT_FILES)): public/% : $(srcdir)/% | public
 	cp $< $@

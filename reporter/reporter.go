@@ -111,6 +111,9 @@ func isAllowedClientVersion(clientVersion string) bool {
 	case "TEST":
 		return true
 	default:
+		// all clients are ok, accept any non-empty value for now.
+		return true
+	case "":
 		return false
 	}
 }
