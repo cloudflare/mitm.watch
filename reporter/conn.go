@@ -72,6 +72,7 @@ func (c *serverCaptureConn) Close() error {
 
 func (c *serverCaptureConn) SetActualTLSVersion(version uint16) {
 	c.info.ActualTLSVersion = version
+	c.info.HasFailed = false
 }
 
 type serverKeyLog struct {
