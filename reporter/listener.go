@@ -54,6 +54,9 @@ func newListener(ln net.Listener, initialReadTimeout time.Duration, originAddres
 // a TLS record containing a fatal alert for unrecognized_name.
 var tlsRecordUnrecognizedName = []byte{21, 3, 1, 0, 2, 2, 112}
 
+// a TLS record containing a fatal alert for handshake_failure.
+var tlsRecordHandshakeFailure = []byte{21, 3, 1, 0, 2, 2, 40}
+
 // handleConnection processes a new connection. It will proxy the connection or
 // forward it to the HTTPS listener.
 //
@@ -126,7 +129,11 @@ func (ln *listener) handleConnection(c net.Conn) {
 		ln.flashpolicyserver.WriteResponse(c)
 	case ln.originAddress == "":
 		log.Printf("%s / %s - no upstream configured", remoteAddr, localAddr)
-		c.Write(tlsRecordUnrecognizedName)
+		if sni != "" {
+			c.Write(tlsRecordUnrecognizedName)
+		} else if isTLS {
+			c.Write(tlsRecordHandshakeFailure)
+		}
 	default:
 		if err := proxyConnection(peekableConn, ln.originAddress); err != nil {
 			log.Printf("%s / %s - error proxying connection: %v\n", remoteAddr, localAddr, err)
