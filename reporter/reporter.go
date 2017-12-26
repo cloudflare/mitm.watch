@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -86,10 +87,16 @@ func newReporter(db *sql.DB, config *Config) *reporter {
 					if webPath == "/index.html" {
 						webPath = "/"
 					}
-					// TODO if this has a .gz file, try to
-					// serve that when the client supports
-					// content-encoding gzip.
-					router.StaticFile(webPath, fullPath)
+
+					// Do not serve compressed files
+					// directly, but do serve it when the
+					// client has an acceptable
+					// content-encoding.
+					if strings.HasSuffix(webPath, ".gz") {
+						return nil
+					}
+
+					StaticFileGz(router, webPath, fullPath)
 				}
 				return nil
 			})
