@@ -51,6 +51,9 @@ To allow socket connections according to the the config file:
     make caddy
     sudo ./caddy -type flashsocketpolicy -conf Caddyfile.flashsocketpolicy
 
+(Alternatively, set the FlashListenAddress option which makes the reporter
+daemon responsible for granting Flash socket access.)
+
 To test, visit https://localhost:4433/ and open the Console tab in the Developer
 Tools (tested with Chrome). Grant permission to use Flash and watch the logs.
 
@@ -66,9 +69,9 @@ a configuration file. Missing keys will remain unchanged. Example:
     ./reporter -writeconfig config_dev.json     # write default config and exit
     ./reporter -config config_dev.json          # run with config
 
-Example where the configuration file is updated with default values:
+Example where the configuration file is updated based on default values:
 
-    echo '{"ListenAddress": ":443"}' > config_prod.json
+    echo '{"ListenAddress": ":443", "FlashListenAddress": ":587"}' > config_prod.json
     ./reporter -config config_prod.json -writeconfig config_prod.json
 
 Note that the `-config` option is also valid for the `generate_cert.go` program.
