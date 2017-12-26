@@ -48,6 +48,11 @@ type Config struct {
 	DummyCertificate string
 	// Private key file for the dummy test service.
 	DummyPrivateKey string
+
+	// SHA256 hash of the API key that grants access to privileged reporter
+	// API endpoints. The API key MUST be cryptographically random. An empty
+	// value prevents access to the privileged endpoint.
+	ReporterApiKeyHash string
 }
 
 var defaultConfig = Config{

@@ -1,9 +1,13 @@
 package main
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -42,9 +46,24 @@ func csrfProtection(c *gin.Context) {
 	c.Next()
 }
 
-func authRequired(c *gin.Context) {
-	// TODO authentication
-	c.Next()
+func makeAuthRequired(apiKeyHash string) gin.HandlerFunc {
+	apiKeyHashBytes, _ := hex.DecodeString(apiKeyHash)
+	if len(apiKeyHashBytes) != sha256.Size {
+		log.Println("Configured ReporterApiKeyHash is invalid, disabling access.")
+		apiKeyHashBytes = nil
+	}
+
+	return func(c *gin.Context) {
+		header := c.GetHeader("X-API-Secret")
+		userKeyHash := sha256.Sum256([]byte(header))
+		// if no key is configured in the application, the following
+		// will fail to match.
+		if subtle.ConstantTimeCompare(apiKeyHashBytes, userKeyHash[:]) != 1 {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+		c.Next()
+	}
 }
 
 func newReporter(db *sql.DB, config *Config) *reporter {
@@ -58,7 +77,7 @@ func newReporter(db *sql.DB, config *Config) *reporter {
 		v1.PATCH("/tests/:testid", rep.updateTest)
 		v1.PUT("/tests/:testid/subtests/:number/clientresult", rep.addClientResult)
 	}
-	authorized := v1.Group("/", authRequired)
+	authorized := v1.Group("/", makeAuthRequired(config.ReporterApiKeyHash))
 	{
 		authorized.GET("/tests", rep.listTests)
 		authorized.DELETE("/tests/:testid", rep.removeTest)
