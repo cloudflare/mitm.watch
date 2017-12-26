@@ -181,9 +181,12 @@ func (h *hostHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		defer conn.Close()
 
-		if tlsConn, ok := conn.(*tls.Conn); ok {
+		// try to log results for non-anonymous requests.
+		testID, _ := parseTestHost(h.config, sni)
+		if tlsConn, ok := conn.(*tls.Conn); ok && testID != "" {
 			serverConn, err := serverCaptureConnFromTLSConn(tlsConn)
 			if err != nil {
+				// note: this could also fire for invalid UUID
 				log.Printf("Failed to set version: %s", err)
 			} else {
 				serverConn.SetActualTLSVersion(r.TLS.Version)
