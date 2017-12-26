@@ -162,6 +162,8 @@ Response-Body:
   - is\_ipv6: bool
   - max\_tls\_version: uint16
 
+Use query parameter `anonymous` to avoid persisting test results.
+
 ### GET /tests
 Response-Body:
 - result: array of resources `/tests/:testid`.

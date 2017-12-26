@@ -75,14 +75,14 @@ func specToDomain(testId string, spec SubtestSpec) string {
 	return fmt.Sprintf("%s-%d.%s", testId, spec.Number, domain)
 }
 
-func gatherTests() (string, []SubtestSpec, error) {
+func gatherTests(verbose bool) (string, []SubtestSpec, error) {
 	testRequest := createTestRequest{
 		// TODO populate client version
 		ClientVersion: "TEST",
 		FlashVersion:  "",
 		UserAgent:     js.Global.Get("navigator").Get("userAgent").String(),
 	}
-	return CreateTest(testRequest)
+	return CreateTest(testRequest, !verbose)
 }
 
 func runTests(testId string, specs []SubtestSpec, verbose bool) {
@@ -141,10 +141,7 @@ func runTests(testId string, specs []SubtestSpec, verbose bool) {
 // startTests retrieves test cases, executes them and optionally submits test
 // results back to the server.
 func StartTests(verbose bool) {
-	if verbose {
-		// TODO retrieve just the list of tests
-	}
-	testId, specs, err := gatherTests()
+	testId, specs, err := gatherTests(verbose)
 	if err != nil {
 		// TODO this could be a network error, show message to user
 		panic(err)

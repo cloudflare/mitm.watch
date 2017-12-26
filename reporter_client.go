@@ -78,9 +78,13 @@ func doRequest(method, path string, reqBody interface{}, respBody interface{}) e
 }
 
 // CreateTest starts a test and obtains the test cases.
-func CreateTest(testRequest createTestRequest) (string, []SubtestSpec, error) {
+func CreateTest(testRequest createTestRequest, anonymous bool) (string, []SubtestSpec, error) {
 	var testResponse createTestResponse
-	err := doRequest("POST", "/tests", testRequest, &testResponse)
+	url := "/tests"
+	if anonymous {
+		url += "?anonymous"
+	}
+	err := doRequest("POST", url, testRequest, &testResponse)
 	if err != nil {
 		return "", nil, err
 	}

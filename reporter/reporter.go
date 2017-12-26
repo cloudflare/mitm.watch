@@ -206,38 +206,45 @@ func (r *reporter) createTest(c *gin.Context) {
 		}
 		subtestSpecs := r.config.Subtests
 
-		tx, err := r.db.Begin()
-		if err != nil {
-			r.dbError(c, err)
-			return
-		}
-		defer func() {
-			if tx != nil {
-				tx.Rollback()
-			}
-		}()
-
-		if err = test.Create(tx); err != nil {
-			r.dbError(c, err)
-			return
-		}
-
-		// subtests
-		for _, spec := range subtestSpecs {
-			subtest := &Subtest{
-				TestID:        test.ID,
-				Number:        spec.Number,
-				MaxTLSVersion: spec.MaxTLSVersion,
-				IsIPv6:        spec.IsIPv6,
-			}
-			if err = subtest.Create(tx); err != nil {
+		anonymousValue, anonymousSet := c.GetQuery("anonymous")
+		if anonymousValue == "" && anonymousSet {
+			// create surrogate identifier (it is needed to create a
+			// random domain)
+			test.TestID = "otr-" + GenerateUUIDv4()
+		} else {
+			tx, err := r.db.Begin()
+			if err != nil {
 				r.dbError(c, err)
 				return
 			}
-		}
+			defer func() {
+				if tx != nil {
+					tx.Rollback()
+				}
+			}()
 
-		tx.Commit()
-		tx = nil
+			if err = test.Create(tx); err != nil {
+				r.dbError(c, err)
+				return
+			}
+
+			// subtests
+			for _, spec := range subtestSpecs {
+				subtest := &Subtest{
+					TestID:        test.ID,
+					Number:        spec.Number,
+					MaxTLSVersion: spec.MaxTLSVersion,
+					IsIPv6:        spec.IsIPv6,
+				}
+				if err = subtest.Create(tx); err != nil {
+					r.dbError(c, err)
+					return
+				}
+			}
+
+			tx.Commit()
+			tx = nil
+		}
 
 		c.JSON(http.StatusCreated, gin.H{
 			"test_id":  test.TestID,
