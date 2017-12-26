@@ -276,6 +276,15 @@ func main() {
 		panic(err)
 	}
 
+	if config.FlashListenAddress != "" {
+		fl, err := net.Listen("tcp", config.FlashListenAddress)
+		if err != nil {
+			log.Fatalf("Failed to listen for Flash Policy Server: %s", err)
+		}
+		log.Printf("Listening for Flash Policy Server at %s\n", fl.Addr())
+		go flashPolicyServer.Serve(fl)
+	}
+
 	l, err := net.Listen("tcp", config.ListenAddress)
 	if err != nil {
 		panic(err)

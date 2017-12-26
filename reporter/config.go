@@ -20,12 +20,18 @@ type Config struct {
 	// Database connection configuration.
 	DatabaseConnInfo string
 
-	// Host and port to listen on
+	// Host and port to listen on for the reporter API and test endpoints.
+	// The port will also be used in flash policy responses.
 	ListenAddress string
 
 	// Address to proxy connections to in case the host is not handled by
 	// us. An empty value prevents proxying.
 	OriginAddress string
+
+	// Host and port to listen on for the Flash Socket Policy server. Flash
+	// requires port 587 to answer requests. Leave the setting empty to
+	// disable the additional service.
+	FlashListenAddress string
 
 	// Host name (suffix) for various purposes.
 	HostReporter   string // Reporter API
