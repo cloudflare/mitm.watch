@@ -84,8 +84,8 @@ func (ln *listener) handleConnection(c net.Conn) {
 		log.Printf("%s - failed to read a record: %v\n", remoteAddr, err)
 		return
 	}
-	sni := parseClientHello(buffer)
-	log.Printf("%s - SNI: %v\n", remoteAddr, sni)
+	sni, isTLS := parseClientHello(buffer)
+	log.Printf("%s - SNI: %v (isTLS: %t)\n", remoteAddr, sni, isTLS)
 
 	// Disable timeout again, this is the responsibility of the (upstream)
 	// server configuration.

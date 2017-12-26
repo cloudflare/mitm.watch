@@ -15,7 +15,9 @@ const (
 )
 
 // parseClientHello tries to parse a TLS record and extract the SNI.
-func parseClientHello(record []byte) string {
+// Returns the parsed SNI and whether the message looks like TLS (even if no SNI
+// Extension is present, the message might still appear to be TLS).
+func parseClientHello(record []byte) (string, bool) {
 	input := cryptobyte.String(record)
 
 	// parse record, but skip version
@@ -24,7 +26,7 @@ func parseClientHello(record []byte) string {
 	if !input.ReadUint8(&contentType) ||
 		contentType != recordTypeHandshake ||
 		!input.Skip(2) || !input.ReadUint16LengthPrefixed(&fragment) {
-		return ""
+		return "", false
 	}
 
 	// parse Handshake message
@@ -32,7 +34,7 @@ func parseClientHello(record []byte) string {
 	var clientHello cryptobyte.String
 	if !fragment.ReadUint8(&msgType) || msgType != typeClientHello ||
 		!fragment.ReadUint24LengthPrefixed(&clientHello) {
-		return ""
+		return "", false
 	}
 
 	// Parse Client Hello message (ignore random, SID, cipher suites,
@@ -46,7 +48,7 @@ func parseClientHello(record []byte) string {
 		!clientHello.ReadUint16LengthPrefixed(&ignore) ||
 		!clientHello.ReadUint8LengthPrefixed(&ignore) ||
 		!clientHello.ReadUint16LengthPrefixed(&exts) {
-		return ""
+		return "", false
 	}
 
 	// Parse extensions
@@ -55,7 +57,7 @@ func parseClientHello(record []byte) string {
 		var extData cryptobyte.String
 		if !exts.ReadUint16(&extType) ||
 			!exts.ReadUint16LengthPrefixed(&extData) {
-			return ""
+			return "", false
 		}
 		if extType != extensionServerName {
 			continue
@@ -63,12 +65,12 @@ func parseClientHello(record []byte) string {
 
 		var serverNameList cryptobyte.String
 		if !extData.ReadUint16LengthPrefixed(&serverNameList) {
-			return ""
+			return "", false
 		}
 		for !serverNameList.Empty() {
 			var nameType uint8
 			if !serverNameList.ReadUint8(&nameType) {
-				return ""
+				return "", false
 			}
 			if nameType != sniTypeHostname {
 				continue
@@ -76,15 +78,15 @@ func parseClientHello(record []byte) string {
 
 			var hostName cryptobyte.String
 			if !serverNameList.ReadUint16LengthPrefixed(&hostName) {
-				return ""
+				return "", false
 			}
-			return string(hostName)
+			return string(hostName), true
 		}
 
 		// extensions must be unique
-		return ""
+		return "", false
 	}
 
 	// server_name extension not found
-	return ""
+	return "", true
 }
