@@ -25,6 +25,7 @@ type listener struct {
 
 	initialReadTimeout time.Duration
 	originAddress      string
+	flashpolicyserver  *FlashPolicyServer
 
 	ClaimRequest RequestClaimer
 
@@ -37,12 +38,13 @@ type listener struct {
 	connectionsWg sync.WaitGroup
 }
 
-func newListener(ln net.Listener, initialReadTimeout time.Duration, originAddress string, claimer RequestClaimer, serverCaptureReady ServerCaptureNotifier) *listener {
+func newListener(ln net.Listener, initialReadTimeout time.Duration, originAddress string, claimer RequestClaimer, serverCaptureReady ServerCaptureNotifier, flashpolicyserver *FlashPolicyServer) *listener {
 	newc := make(chan net.Conn, maxHttpsQueueSize)
 	return &listener{
 		Listener:           ln,
 		initialReadTimeout: initialReadTimeout,
 		originAddress:      originAddress,
+		flashpolicyserver:  flashpolicyserver,
 		ClaimRequest:       claimer,
 		ServerCaptureReady: serverCaptureReady,
 		newc:               newc,
@@ -78,14 +80,15 @@ func (ln *listener) handleConnection(c net.Conn) {
 	}
 
 	remoteAddr := c.RemoteAddr().String()
+	localAddr := c.LocalAddr().String()
 	peekableConn := NewPeekableConn(c)
 	buffer, err := peekableConn.peek(4096)
 	if len(buffer) == 0 {
-		log.Printf("%s - failed to read a record: %v\n", remoteAddr, err)
+		log.Printf("%s / %s - failed to read a record: %v\n", remoteAddr, localAddr, err)
 		return
 	}
 	sni, isTLS := parseClientHello(buffer)
-	log.Printf("%s - SNI: %v (isTLS: %t)\n", remoteAddr, sni, isTLS)
+	log.Printf("%s / %s - SNI: %v (isTLS: %t)\n", remoteAddr, localAddr, sni, isTLS)
 
 	// Disable timeout again, this is the responsibility of the (upstream)
 	// server configuration.
@@ -106,7 +109,7 @@ func (ln *listener) handleConnection(c net.Conn) {
 					HasFailed: true,
 				},
 				ClientIP: net.ParseIP(parseHost(remoteAddr)),
-				ServerIP: net.ParseIP(parseHost(c.LocalAddr().String())),
+				ServerIP: net.ParseIP(parseHost(localAddr)),
 			}
 			capturedConn := &serverCaptureConn{
 				CaptureConn:        NewCaptureConn(peekableConn, &serverCapture.Frames),
@@ -118,12 +121,15 @@ func (ln *listener) handleConnection(c net.Conn) {
 		} else {
 			ln.newc <- peekableConn
 		}
+	case !isTLS && ln.flashpolicyserver.IsRequest(buffer):
+		log.Printf("%s / %s - handling Flash Socket Policy request", remoteAddr, localAddr)
+		ln.flashpolicyserver.WriteResponse(c)
 	case ln.originAddress == "":
-		log.Printf("%s - no upstream configured", remoteAddr)
+		log.Printf("%s / %s - no upstream configured", remoteAddr, localAddr)
 		c.Write(tlsRecordUnrecognizedName)
 	default:
 		if err := proxyConnection(peekableConn, ln.originAddress); err != nil {
-			log.Printf("%s - error proxying connection: %v\n", remoteAddr, err)
+			log.Printf("%s / %s - error proxying connection: %v\n", remoteAddr, localAddr, err)
 		}
 	}
 }

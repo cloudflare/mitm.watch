@@ -231,6 +231,20 @@ func parseArgs(config *Config) error {
 	return nil
 }
 
+func newFlashPolicyServerFromConfig(config *Config) (*FlashPolicyServer, error) {
+	_, port, err := net.SplitHostPort(config.ListenAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewFlashPolicyServer([]FlashPolicyRule{
+		FlashPolicyRule{
+			FromDomain: config.HostReporter,
+			ToPorts:    string(port),
+		},
+	}), nil
+}
+
 func main() {
 	config := &defaultConfig
 	if err := parseArgs(config); err != nil {
@@ -249,6 +263,11 @@ func main() {
 		log.Fatalf("Failed to load dummy certificate: %s", err)
 	}
 
+	flashPolicyServer, err := newFlashPolicyServerFromConfig(config)
+	if err != nil {
+		log.Fatalf("Invalid flash policy server settings: %s", err)
+	}
+
 	db, err := sql.Open("postgres", config.DatabaseConnInfo)
 	if err != nil {
 		panic(err)
@@ -262,7 +281,7 @@ func main() {
 		panic(err)
 	}
 	initialReadTimeout := time.Duration(config.InitialReadTimeoutSecs) * time.Second
-	wl := newListener(l, initialReadTimeout, config.OriginAddress, makeIsOurHost(db, config), newServerCaptureReady(db))
+	wl := newListener(l, initialReadTimeout, config.OriginAddress, makeIsOurHost(db, config), newServerCaptureReady(db), flashPolicyServer)
 	go wl.Serve()
 
 	hostRouter := &hostHandler{
