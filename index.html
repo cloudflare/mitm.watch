@@ -165,6 +165,14 @@ var detectStatus = function(exp) {
     return STATUS_OK;
   } else if (exp.Result === "connection timed out") {
     return STATUS_NA;
+  } else if (exp.Result === '[SecurityErrorEvent type="securityError" bubbles=false cancelable=false eventPhase=2 text="Error #2048"]') {
+    // Override error message to provide more useful feedback.
+    if (exp.IPv6) {
+      exp.Result = "Connection failed, perhaps port 587 is blocked or IPv6 is unsupported";
+    } else {
+      exp.Result = "Connection failed, perhaps port 587 is blocked or the network is unreachable";
+    }
+    return STATUS_NA;
   } else {
     return STATUS_FAIL;
   }
