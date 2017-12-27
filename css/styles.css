@@ -8,6 +8,8 @@ body:not(.test-active) .results-text,
 body:not(.booted) .results-text,
 /* body:not(.test-active) #socketApi, */
 body:not(.test-complete) #test-complete-message,
+body:not(.test-verbose) .testid-reference,
+body.test-verbose .testid-unavailable,
 #status-text-booting,
 #flash-message {
   display: none;
@@ -56,6 +58,11 @@ body.test-active.flash-please #flash-message {
 }
 #results tr.status-na td:nth-child(3) {
   background: #e0e0e0;
+}
+
+#testid {
+  font-weight: bold;
+  font-family: monospace;
 }
 
 /*page style css*/

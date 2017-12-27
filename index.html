@@ -106,10 +106,21 @@
           </thead>
         </table>
 
-        <p id="test-complete-message">
-          Tests are complete.
-          <button type="button" class="btn-restart" id="action-restart">Restart</button>
-        </p>
+        <div id="test-complete-message">
+          <p>
+            Tests are complete.
+            <button type="button" class="btn-restart" id="action-restart">Restart</button>
+          </p>
+          <p class="testid-reference">
+            If you would like to refer to this test result, use test identifier
+            <span id="testid"></span>.
+          </p>
+          <p class="testid-unavailable">
+            Additional MITM detection was disabled, so no test identifier is
+            available. Restart the test and enable additional MITM detection if
+            you need an identifier to report issues.
+          </p>
+        </div>
 
         <div id="flash-message">
           <div class="flash-warning">
@@ -215,6 +226,11 @@ var startTests = function() {
   }
   setTestState(TS_RUNNING);
   jssock.StartTests(verbose);
+  if (verbose) {
+    document.body.classList.add("test-verbose");
+  } else {
+    document.body.classList.remove("test-verbose");
+  }
 };
 document.getElementById("action-start").onclick = startTests;
 var restartTests = function() {
@@ -252,6 +268,11 @@ var updateStatus = function(status) {
     }
   }
 };
+var parseTestIDFromDomain = function(domain) {
+  var reUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+  var match = reUUID.exec(domain);
+  return match ? match[0] : "";
+};
 var addExperiment = function(exp) {
   if (results.tBodies.length === 0) {
     results.createTBody();
@@ -262,6 +283,10 @@ var addExperiment = function(exp) {
   item.insertCell().textContent = exp.IPv6 ? "IPv6" : "IPv4";
   item.insertCell().textContent = "Pending";
   item.insertCell(); // Description
+
+  // TODO remove this old Experiment structure and pass the identifier in a
+  // different way (e.g. at the end of tests).
+  document.getElementById("testid").textContent = parseTestIDFromDomain(exp.Domain);
 };
 var updateExperiment = function(i, exp) {
   var row = results.tBodies[0].rows[i];
