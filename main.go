@@ -30,6 +30,7 @@ type Experiment struct {
 	Version uint16
 	Result  string
 	Failed  bool
+	IsMitm  bool
 }
 
 type keyLogPrinter struct {
@@ -125,6 +126,15 @@ func runTests(testId string, specs []SubtestSpec, verbose bool) {
 			} else {
 				exp.Result = response
 				exp.Failed = false
+			}
+			// if a version is negotiated, but does not match the
+			// expected version, it is likely being intercepted.
+			if result.ActualTLSVersion != 0 {
+				maxTLSVersion := spec.MaxTLSVersion
+				if maxTLSVersion == tls.VersionTLS13 {
+					maxTLSVersion = tls.VersionTLS13Draft22
+				}
+				exp.IsMitm = maxTLSVersion != result.ActualTLSVersion
 			}
 			// display in UI
 			updateExperiment(i, exp)

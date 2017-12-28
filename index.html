@@ -300,8 +300,8 @@ var updateExperiment = function(i, exp) {
   } else if (status == STATUS_NA) {
     desc = exp.Result;
     row.className = "status-na";
-  } else if (exp.Expected) {
-    desc = "Matches expected: " + exp.Expected;
+  } else if (exp.IsMitm) {
+    desc = "Communication succeeded, but interference by a MITM was detected";
     row.className = "status-ok";
   } else {
     desc = "";
