@@ -188,7 +188,6 @@ func tryTLS(domain string, version uint16, result *clientResult) (string, error)
 	tls_config := &tls.Config{
 		ServerName:   domain,
 		KeyLogWriter: keylog,
-		MinVersion:   version,
 		MaxVersion:   version,
 	}
 	var rootCAs *x509.CertPool
